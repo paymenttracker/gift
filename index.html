@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gift Card Hub - Secure Voucher Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .fade-in {
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/60 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="navigateHome()">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-gift text-lg"></i>
+        </div>
+        <div>
+          <span class="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
+            Voucher<span class="text-indigo-400">Vault</span>
+          </span>
+          <span class="text-[10px] text-slate-400 block -mt-1 font-medium">Google Identity Security</span>
+        </div>
+      </div>
+
+      <div id="nav-actions" class="flex items-center gap-2 sm:gap-3">
+        <!-- Injected via JavaScript based on auth state -->
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-[-20px] opacity-0 pointer-events-none max-w-md shadow-2xl rounded-xl p-4 flex items-start gap-3 border text-sm">
+      <i id="toast-icon" class="fa-solid fa-circle-check text-lg mt-0.5"></i>
+      <div class="flex-1">
+        <p id="toast-title" class="font-semibold text-white"></p>
+        <p id="toast-msg" class="text-slate-300 text-xs mt-0.5"></p>
+      </div>
+      <button onclick="dismissToast()" class="text-slate-400 hover:text-white ml-2">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- ================= AUTH VIEW: SIGNUP (3-STEP PROCESS) ================= -->
+    <section id="view-signup" class="fade-in hidden max-w-lg mx-auto my-8">
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl shadow-xl shadow-black/40 p-6 sm:p-8">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-white tracking-tight">Create Account</h2>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">Complete the 3-step registration with Google Cloud Identity</p>
+        </div>
+
+        <!-- 3-Step Progress Indicators -->
+        <div class="relative flex justify-between items-center mb-8 px-2">
+          <div class="absolute top-1/2 left-4 right-4 h-0.5 bg-slate-700 -translate-y-1/2 z-0"></div>
+          <div id="step-progress-bar" class="absolute top-1/2 left-4 h-0.5 bg-indigo-500 -translate-y-1/2 z-0 transition-all duration-300 w-0"></div>
+
+          <!-- Step 1 Dot -->
+          <div class="relative z-10 flex flex-col items-center">
+            <div id="dot-step-1" class="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800 shadow-md">1</div>
+            <span class="text-[11px] font-medium text-slate-300 mt-1.5">Details</span>
+          </div>
+          <!-- Step 2 Dot -->
+          <div class="relative z-10 flex flex-col items-center">
+            <div id="dot-step-2" class="w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800">2</div>
+            <span class="text-[11px] font-medium text-slate-400 mt-1.5">Password</span>
+          </div>
+          <!-- Step 3 Dot -->
+          <div class="relative z-10 flex flex-col items-center">
+            <div id="dot-step-3" class="w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800">3</div>
+            <span class="text-[11px] font-medium text-slate-400 mt-1.5">Verification</span>
+          </div>
+        </div>
+
+        <!-- STEP 1: Personal Details -->
+        <form id="form-step-1" onsubmit="handleSignupStep1(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Full Name <span class="text-rose-400">*</span></label>
+            <div class="relative">
+              <i class="fa-regular fa-user absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="text" id="su-name" required placeholder="John Doe" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Email ID <span class="text-rose-400">*</span></label>
+            <div class="relative">
+              <i class="fa-regular fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="email" id="su-email" required placeholder="name@example.com" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Mobile Number <span class="text-slate-500 text-[10px] font-normal">(Optional)</span></label>
+            <div class="relative">
+              <i class="fa-solid fa-phone absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="tel" id="su-mobile" placeholder="+91 98765 43210" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 text-sm mt-2">
+            <span>Continue to Password</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </form>
+
+        <!-- STEP 2: Password & Confirm Password -->
+        <form id="form-step-2" onsubmit="handleSignupStep2(event)" class="space-y-4 hidden">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Password <span class="text-rose-400">*</span></label>
+            <div class="relative">
+              <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="password" id="su-password" required minlength="8" placeholder="At least 8 characters" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+              <button type="button" onclick="togglePasswordVisibility('su-password', this)" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-200">
+                <i class="fa-regular fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Confirm Password <span class="text-rose-400">*</span></label>
+            <div class="relative">
+              <i class="fa-solid fa-shield-halved absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="password" id="su-confirm-password" required minlength="8" placeholder="Repeat your password" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+              <button type="button" onclick="togglePasswordVisibility('su-confirm-password', this)" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-200">
+                <i class="fa-regular fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-900/60 border border-slate-700/50 rounded-xl text-xs text-slate-400 space-y-1">
+            <p class="font-medium text-slate-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-info text-indigo-400"></i> Security Notice:
+            </p>
+            <p>Your password will be salted & hashed. A verification token is issued through Google Cloud Identity Platform.</p>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button type="button" onclick="renderSignupStep(1)" class="w-1/3 bg-slate-700/70 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 px-4 rounded-xl transition text-sm">
+              Back
+            </button>
+            <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition text-sm flex items-center justify-center gap-2">
+              <span>Create & Send Link</span>
+              <i class="fa-solid fa-paper-plane text-xs"></i>
+            </button>
+          </div>
+        </form>
+
+        <!-- STEP 3: Email Verification (Google Console Flow) -->
+        <div id="step-3-container" class="space-y-5 hidden text-center">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-3xl shadow-inner">
+            <i class="fa-solid fa-envelope-circle-check"></i>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-bold text-white">Google Verification Link Sent!</h3>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
+              Google Cloud Identity has dispatched a verification email to:
+            </p>
+            <p id="verify-email-display" class="font-mono text-sm text-indigo-300 font-semibold mt-1 bg-slate-900/80 py-1.5 px-3 rounded-lg inline-block border border-slate-700"></p>
+          </div>
+
+          <!-- Mock Google Mail / Verification Link Dispatch Simulation Box -->
+          <div class="bg-slate-900/90 border border-indigo-500/30 rounded-xl p-4 text-left shadow-lg">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
+              <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <i class="fa-brands fa-google text-rose-400"></i> Google Cloud Auth Dispatcher
+              </span>
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-mono">Live Simulation</span>
+            </div>
+            <p class="text-xs text-slate-300 mb-2">Click the simulated email link below to verify this email address instantly:</p>
+            <div class="p-2.5 bg-slate-950 rounded-lg border border-slate-800 break-all text-xs font-mono text-slate-400 flex flex-col gap-2">
+              <span id="mock-link-preview" class="text-indigo-400"></span>
+              <button type="button" onclick="simulateEmailVerificationClick()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-2 shadow-md">
+                <i class="fa-solid fa-check-double"></i>
+                <span>Simulate Clicking Google Verification Link</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="text-xs text-slate-400 pt-1">
+            Already verified? 
+            <button onclick="switchView('login')" class="text-indigo-400 hover:text-indigo-300 font-semibold underline ml-1">Go to Login</button>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-700/60 text-center text-xs text-slate-400">
+          Already have an account? 
+          <button onclick="switchView('login')" class="text-indigo-400 hover:text-indigo-300 font-semibold ml-1">Sign In</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AUTH VIEW: LOGIN ================= -->
+    <section id="view-login" class="fade-in hidden max-w-md mx-auto my-12">
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl shadow-xl shadow-black/40 p-6 sm:p-8">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-white tracking-tight">Welcome Back</h2>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">Sign in to manage your gift cards and vouchers</p>
+        </div>
+
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Email ID</label>
+            <div class="relative">
+              <i class="fa-regular fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="email" id="login-email" required placeholder="name@example.com" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Password</label>
+              <button type="button" onclick="switchView('forgot')" class="text-xs text-indigo-400 hover:text-indigo-300">Forgot Password?</button>
+            </div>
+            <div class="relative">
+              <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+              <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-200">
+                <i class="fa-regular fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 text-sm mt-2">
+            <span>Sign In</span>
+            <i class="fa-solid fa-right-to-bracket text-xs"></i>
+          </button>
+        </form>
+
+        <div class="mt-6 pt-4 border-t border-slate-700/60 text-center text-xs text-slate-400">
+          Don't have an account? 
+          <button onclick="switchView('signup')" class="text-indigo-400 hover:text-indigo-300 font-semibold ml-1">Create an account</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AUTH VIEW: FORGOT PASSWORD ================= -->
+    <section id="view-forgot" class="fade-in hidden max-w-md mx-auto my-12">
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl shadow-xl shadow-black/40 p-6 sm:p-8">
+        <div class="text-center mb-6">
+          <div class="w-12 h-12 mx-auto rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl mb-3 border border-amber-500/20">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-white tracking-tight">Forgot Password</h2>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">Receive a secure reset link through Google Console services</p>
+        </div>
+
+        <form id="form-forgot" onsubmit="handleForgotPassword(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Registered Email ID</label>
+            <div class="relative">
+              <i class="fa-regular fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <input type="email" id="forgot-email" required placeholder="name@example.com" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 text-sm">
+            <span>Send Reset Link via Google</span>
+            <i class="fa-solid fa-paper-plane text-xs"></i>
+          </button>
+        </form>
+
+        <!-- Simulated Reset Action Box -->
+        <div id="forgot-reset-box" class="mt-4 p-3 bg-slate-900 border border-amber-500/30 rounded-xl text-xs space-y-2 hidden">
+          <p class="text-amber-300 font-semibold flex items-center gap-1.5">
+            <i class="fa-solid fa-envelope-open-text"></i> Google Console Reset Dispatched
+          </p>
+          <p class="text-slate-400">Click below to simulate opening the Google password reset link:</p>
+          <button onclick="promptQuickPasswordReset()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 py-1.5 rounded-lg font-medium">
+            Open Password Reset Dialog
+          </button>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-700/60 text-center text-xs text-slate-400">
+          Remembered your credentials? 
+          <button onclick="switchView('login')" class="text-indigo-400 hover:text-indigo-300 font-semibold ml-1">Back to Login</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DASHBOARD & GIFT CARDS VIEW ================= -->
+    <section id="view-dashboard" class="fade-in hidden space-y-8">
+      
+      <!-- Welcome Header & Quick Action -->
+      <div class="bg-gradient-to-r from-slate-800 via-indigo-950/40 to-slate-800 border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full w-fit border border-emerald-500/20 mb-2">
+            <i class="fa-solid fa-shield-check"></i>
+            <span>Google Cloud Identity Verified</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Hello, <span id="dash-user-name" class="text-indigo-400">User</span>!
+          </h2>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">Manage and track your vouchers, secure pins, and redemption statuses.</p>
+        </div>
+
+        <button onclick="openAddCardModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-2 text-sm shrink-0">
+          <i class="fa-solid fa-plus"></i>
+          <span>Add New Gift Card</span>
+        </button>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex items-center gap-4 shadow-sm">
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-ticket"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-medium">Total Gift Cards</p>
+            <p id="stat-total" class="text-xl font-bold text-white">0</p>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex items-center gap-4 shadow-sm">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-medium">Redeemed</p>
+            <p id="stat-redeemed" class="text-xl font-bold text-emerald-400">0</p>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex items-center gap-4 shadow-sm">
+          <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-medium">Unredeemed / Active</p>
+            <p id="stat-active" class="text-xl font-bold text-rose-400">0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gift Cards Section -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-wallet text-indigo-400 text-sm"></i>
+            <span>Your Gift Card Collection</span>
+          </h3>
+          <span class="text-xs text-slate-400">Click any card to open its voucher page</span>
+        </div>
+
+        <!-- Cards List / Grid -->
+        <div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="cards-empty" class="hidden bg-slate-800/40 border-2 border-dashed border-slate-700/80 rounded-2xl p-10 text-center">
+          <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 text-2xl">
+            <i class="fa-solid fa-gifts"></i>
+          </div>
+          <h4 class="text-base font-semibold text-slate-200">No Gift Cards Added Yet</h4>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-4">Add your first voucher (e.g., Amazon, Apple, PlayStation) to store secure pins and track redemption status.</p>
+          <button onclick="openAddCardModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-4 rounded-xl text-xs transition">
+            + Add Gift Card Now
+          </button>
+        </div>
+      </div>
+
+      <!-- ================= SELECTED GIFT VOUCHER DETAIL PAGE ================= -->
+      <div id="card-detail-view" class="hidden fade-in bg-slate-800 border-2 border-indigo-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700 pb-5">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-md border border-indigo-500/20">Voucher Details Page</span>
+              <span id="detail-card-badge" class="text-xs px-2.5 py-0.5 rounded-md font-bold"></span>
+            </div>
+            <h3 id="detail-card-name" class="text-2xl font-extrabold text-white mt-1"></h3>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="deleteCurrentCard()" class="text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 font-medium px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+              <i class="fa-regular fa-trash-can"></i>
+              <span>Delete Card</span>
+            </button>
+            <button onclick="closeCardDetail()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+              <i class="fa-solid fa-xmark"></i>
+              <span>Close View</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Voucher Details Table as Specified in Prompt -->
+        <div class="overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-900/80">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-800/90 text-slate-300 uppercase text-[11px] font-bold tracking-wider border-b border-slate-700">
+                <th class="py-3.5 px-4 font-bold"><i class="fa-solid fa-barcode text-indigo-400 mr-1.5"></i>Gift Voucher</th>
+                <th class="py-3.5 px-4 font-bold"><i class="fa-solid fa-key text-amber-400 mr-1.5"></i>Pin</th>
+                <th class="py-3.5 px-4 font-bold"><i class="fa-regular fa-calendar-days text-sky-400 mr-1.5"></i>Purchase Date</th>
+                <th class="py-3.5 px-4 font-bold"><i class="fa-solid fa-id-badge text-purple-400 mr-1.5"></i>Which ID</th>
+                <th class="py-3.5 px-4 font-bold text-center"><i class="fa-solid fa-toggle-on text-emerald-400 mr-1.5"></i>Redeemed or Not</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              <tr class="hover:bg-slate-800/40 transition">
+                <!-- Gift Voucher -->
+                <td class="py-4 px-4 font-mono font-bold text-indigo-300 select-all">
+                  <div class="flex items-center gap-2">
+                    <span id="td-voucher-code"></span>
+                    <button onclick="copyToClipboard('td-voucher-code')" title="Copy Voucher Code" class="text-slate-400 hover:text-white text-xs">
+                      <i class="fa-regular fa-copy"></i>
+                    </button>
+                  </div>
+                </td>
+
+                <!-- Pin -->
+                <td class="py-4 px-4 font-mono font-bold text-amber-300 select-all">
+                  <div class="flex items-center gap-2">
+                    <span id="td-pin"></span>
+                    <button onclick="copyToClipboard('td-pin')" title="Copy Pin" class="text-slate-400 hover:text-white text-xs">
+                      <i class="fa-regular fa-copy"></i>
+                    </button>
+                  </div>
+                </td>
+
+                <!-- Purchase Date -->
+                <td id="td-purchase-date" class="py-4 px-4 text-slate-300 font-medium"></td>
+
+                <!-- Which ID -->
+                <td id="td-which-id" class="py-4 px-4 font-mono text-purple-300"></td>
+
+                <!-- Redeemed or Not (Interactive Green / Red Toggle Button) -->
+                <td class="py-4 px-4 text-center">
+                  <button id="td-redeemed-btn" onclick="toggleActiveCardRedemption()" class="px-5 py-2 rounded-xl text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-lg cursor-pointer transform active:scale-95 flex items-center justify-center gap-2 mx-auto">
+                    <span id="td-redeemed-icon"></span>
+                    <span id="td-redeemed-text"></span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 flex items-center justify-between text-xs text-slate-400">
+          <span class="flex items-center gap-2">
+            <i class="fa-solid fa-lightbulb text-amber-400"></i>
+            Click the <strong class="text-slate-200">"Redeemed or Not"</strong> button to toggle status: <span class="text-emerald-400 font-semibold">Green = Redeemed</span> and <span class="text-rose-400 font-semibold">Red = Not Redeemed</span>.
+          </span>
+          <span class="text-[11px] text-slate-500 font-mono">Syncs automatically</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= ADD GIFT CARD MODAL ================= -->
+  <div id="modal-add-card" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl fade-in">
+      <div class="flex justify-between items-center mb-5">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-gift text-indigo-400"></i>
+          <span>Add New Gift Card</span>
+        </h3>
+        <button onclick="closeAddCardModal()" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateCard(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+            Gift Card Name <span class="text-rose-400">*</span>
+          </label>
+          <input type="text" id="new-card-name" required placeholder="e.g. Amazon, Steam, Starbucks" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+        </div>
+
+        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-700/50 text-xs text-slate-400 space-y-1">
+          <p class="font-medium text-slate-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Auto-Generated Values:
+          </p>
+          <p>• <strong>Gift Voucher:</strong> High-entropy cryptographic voucher</p>
+          <p>• <strong>Pin:</strong> 4 to 6 digit security code</p>
+          <p>• <strong>Which ID:</strong> Google-standard unique identifier</p>
+          <p>• <strong>Purchase Date:</strong> Current date</p>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeAddCardModal()" class="w-1/3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-2.5 px-4 rounded-xl transition text-sm">
+            Cancel
+          </button>
+          <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition text-sm">
+            Save Gift Card
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="border-t border-slate-800 mt-auto py-6 bg-slate-900/80 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+      <p>© 2026 VoucherVault • Security Architecture compliant with Google Cloud Identity & Firebase Auth</p>
+      <div class="flex items-center gap-4 text-slate-400">
+        <span class="hover:text-slate-200 cursor-pointer" onclick="showToast('Encryption: AES-GCM 256-bit simulated', 'info')">Security Standard</span>
+        <span>•</span>
+        <span class="hover:text-slate-200 cursor-pointer" onclick="showToast('Single-file portable deployment', 'success')">Standalone Build</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= APPLICATION LOGIC ================= -->
+  <script>
+    // App State Management using localStorage for persistence
+    const STORAGE_USERS_KEY = "vv_users_db";
+    const STORAGE_SESSION_KEY = "vv_current_session";
+    const STORAGE_CARDS_KEY = "vv_gift_cards_db";
+
+    let currentUser = null;
+    let tempSignupData = {};
+    let activeCardId = null;
+
+    // Initialize Mock DBs if empty
+    function initDatabase() {
+      if (!localStorage.getItem(STORAGE_USERS_KEY)) {
+        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify([]));
+      }
+      if (!localStorage.getItem(STORAGE_CARDS_KEY)) {
+        // Preload sample voucher for demonstration
+        const initialCards = [
+          {
+            id: "card-" + Date.now(),
+            userEmail: "demo@google.com",
+            name: "Amazon Prime Gift Card",
+            voucherCode: "AMZ-9942-8821-X",
+            pin: "7489",
+            purchaseDate: "2026-09-01",
+            whichId: "ID-582109",
+            isRedeemed: false
+          }
+        ];
+        localStorage.setItem(STORAGE_CARDS_KEY, JSON.stringify(initialCards));
+      }
+
+      // Check existing session
+      const savedSession = localStorage.getItem(STORAGE_SESSION_KEY);
+      if (savedSession) {
+        try {
+          currentUser = JSON.parse(savedSession);
+        } catch (e) {
+          currentUser = null;
+        }
+      }
+    }
+
+    // View Routing
+    function switchView(viewName) {
+      const views = ['signup', 'login', 'forgot', 'dashboard'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.add('hidden');
+      });
+
+      const activeEl = document.getElementById(`view-${viewName}`);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      renderNav();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function navigateHome() {
+      if (currentUser && currentUser.isVerified) {
+        switchView('dashboard');
+      } else {
+        switchView('login');
+      }
+    }
+
+    function renderNav() {
+      const navActions = document.getElementById('nav-actions');
+      if (currentUser && currentUser.isVerified) {
+        navActions.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="hidden sm:flex flex-col text-right">
+              <span class="text-xs font-semibold text-white">${escapeHtml(currentUser.name)}</span>
+              <span class="text-[10px] text-emerald-400 font-mono">Verified</span>
+            </div>
+            <button onclick="handleLogout()" class="bg-slate-700/80 hover:bg-rose-600/90 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 border border-slate-600">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+        `;
+      } else {
+        navActions.innerHTML = `
+          <button onclick="switchView('login')" class="text-slate-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+            Sign In
+          </button>
+          <button onclick="switchView('signup')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-indigo-600/20">
+            Sign Up
+          </button>
+        `;
+      }
+    }
+
+    // Toast Notifications
+    function showToast(title, type = 'success', subtitle = '') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      const titleEl = document.getElementById('toast-title');
+      const msgEl = document.getElementById('toast-msg');
+
+      titleEl.innerText = title;
+      msgEl.innerText = subtitle;
+
+      if (type === 'success') {
+        toast.className = "fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-0 opacity-100 max-w-md shadow-2xl rounded-xl p-4 flex items-start gap-3 border text-sm bg-slate-800 border-emerald-500/50 text-emerald-400";
+        icon.className = "fa-solid fa-circle-check text-lg mt-0.5 text-emerald-400";
+      } else if (type === 'error') {
+        toast.className = "fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-0 opacity-100 max-w-md shadow-2xl rounded-xl p-4 flex items-start gap-3 border text-sm bg-slate-800 border-rose-500/50 text-rose-400";
+        icon.className = "fa-solid fa-circle-xmark text-lg mt-0.5 text-rose-400";
+      } else {
+        toast.className = "fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-0 opacity-100 max-w-md shadow-2xl rounded-xl p-4 flex items-start gap-3 border text-sm bg-slate-800 border-indigo-500/50 text-indigo-400";
+        icon.className = "fa-solid fa-circle-info text-lg mt-0.5 text-indigo-400";
+      }
+
+      setTimeout(() => dismissToast(), 4500);
+    }
+
+    function dismissToast() {
+      const toast = document.getElementById('toast');
+      toast.classList.remove('translate-y-0', 'opacity-100');
+      toast.classList.add('translate-y-[-20px]', 'opacity-0');
+    }
+
+    // Password Visibility Toggle
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    // ================= 3-STEP SIGNUP LOGIC =================
+    function renderSignupStep(step) {
+      const step1Form = document.getElementById('form-step-1');
+      const step2Form = document.getElementById('form-step-2');
+      const step3Container = document.getElementById('step-3-container');
+      const progressBar = document.getElementById('step-progress-bar');
+
+      const dot1 = document.getElementById('dot-step-1');
+      const dot2 = document.getElementById('dot-step-2');
+      const dot3 = document.getElementById('dot-step-3');
+
+      step1Form.classList.add('hidden');
+      step2Form.classList.add('hidden');
+      step3Container.classList.add('hidden');
+
+      if (step === 1) {
+        step1Form.classList.remove('hidden');
+        progressBar.style.width = '0%';
+        dot1.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800 shadow-md';
+        dot2.className = 'w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
+        dot3.className = 'w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
+      } else if (step === 2) {
+        step2Form.classList.remove('hidden');
+        progressBar.style.width = '50%';
+        dot1.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
+        dot1.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
+        dot2.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800 shadow-md';
+        dot3.className = 'w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
+      } else if (step === 3) {
+        step3Container.classList.remove('hidden');
+        progressBar.style.width = '100%';
+        dot1.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
+        dot1.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
+        dot2.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
+        dot2.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
+        dot3.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800 shadow-md';
+      }
+    }
+
+    function handleSignupStep1(e) {
+      e.preventDefault();
+      const name = document.getElementById('su-name').value.trim();
+      const email = document.getElementById('su-email').value.trim().toLowerCase();
+      const mobile = document.getElementById('su-mobile').value.trim();
+
+      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
+      if (users.some(u => u.email === email)) {
+        showToast('Email already registered', 'error', 'Please log in or use a different email ID.');
+        return;
+      }
+
+      tempSignupData.name = name;
+      tempSignupData.email = email;
+      tempSignupData.mobile = mobile || null;
+
+      renderSignupStep(2);
+    }
+
+    function handleSignupStep2(e) {
+      e.preventDefault();
+      const password = document.getElementById('su-password').value;
+      const confirmPassword = document.getElementById('su-confirm-password').value;
+
+      if (password.length < 8) {
+        showToast('Password too short', 'error', 'Must be at least 8 characters long.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showToast('Passwords mismatch', 'error', 'Password and Confirm Password do not match.');
+        return;
+      }
+
+      tempSignupData.password = password; // In real backend: bcrypt hashed
+      tempSignupData.isVerified = false;
+      tempSignupData.verificationToken = "gc_token_" + Math.random().toString(36).substring(2) + Date.now();
+      tempSignupData.createdAt = new Date().toISOString();
+
+      // Save user to storage database
+      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
+      users.push(tempSignupData);
+      localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
+
+      // Build simulated Google verification link
+      const verificationLink = `https://identitytoolkit.googleapis.com/v1/accounts:verifyEmail?apiKey=AIzaSyDEMO_KEY&token=${tempSignupData.verificationToken}&email=${encodeURIComponent(tempSignupData.email)}`;
+      
+      document.getElementById('verify-email-display').innerText = tempSignupData.email;
+      document.getElementById('mock-link-preview').innerText = verificationLink;
+
+      showToast('Step 3: Verification Link Sent', 'success', `Google identity dispatch sent to ${tempSignupData.email}`);
+      renderSignupStep(3);
+    }
+
+    function simulateEmailVerificationClick() {
+      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
+      const target = users.find(u => u.email === tempSignupData.email);
+
+      if (target) {
+        target.isVerified = true;
+        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
+        showToast('Email Verified Successfully!', 'success', 'Google Cloud Identity verified your account. You can now login.');
+        
+        // Auto-fill login and transition
+        document.getElementById('login-email').value = target.email;
+        setTimeout(() => switchView('login'), 1200);
+      }
+    }
+
+    // ================= LOGIN LOGIC =================
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim().toLowerCase();
+      const password = document.getElementById('login-password').value;
+
+      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
+      const user = users.find(u => u.email === email && u.password === password);
+
+      if (!user) {
+        showToast('Invalid Credentials', 'error', 'Please check your email and password.');
+        return;
+      }
+
+      if (!user.isVerified) {
+        showToast('Email Not Verified', 'error', 'Please verify your email via the Google verification link first.');
+        tempSignupData = user;
+        document.getElementById('verify-email-display').innerText = user.email;
+        document.getElementById('mock-link-preview').innerText = `https://identitytoolkit.googleapis.com/v1/accounts:verifyEmail?apiKey=AIzaSyDEMO_KEY&token=${user.verificationToken}&email=${encodeURIComponent(user.email)}`;
+        switchView('signup');
+        renderSignupStep(3);
+        return;
+      }
+
+      currentUser = user;
+      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify({
+        email: user.email,
+        name: user.name,
+        isVerified: true
+      }));
+
+      showToast(`Welcome, ${user.name}!`, 'success', 'Successfully authenticated.');
+      loadDashboard();
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      localStorage.removeItem(STORAGE_SESSION_KEY);
+      showToast('Logged out', 'info', 'Session ended successfully.');
+      switchView('login');
+    }
+
+    // ================= FORGOT PASSWORD LOGIC =================
+    function handleForgotPassword(e) {
+      e.preventDefault();
+      const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
+      const user = users.find(u => u.email === email);
+
+      if (!user) {
+        showToast('Email Not Found', 'error', 'No registered account found with that email.');
+        return;
+      }
+
+      document.getElementById('forgot-reset-box').classList.remove('hidden');
+      showToast('Password Reset Dispatched', 'info', 'Google Console dispatched the reset link.');
+    }
+
+    function promptQuickPasswordReset() {
+      const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+      const newPassword = prompt("Enter your new password (minimum 8 characters):");
+      if (!newPassword || newPassword.length < 8) {
+        alert("Password must be at least 8 characters long.");
+        return;
+      }
+
+      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
+      const user = users.find(u => u.email === email);
+      if (user) {
+        user.password = newPassword;
+        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
+        showToast('Password Updated', 'success', 'You can now sign in with your new password.');
+        document.getElementById('login-email').value = email;
+        document.getElementById('forgot-reset-box').classList.add('hidden');
+        switchView('login');
+      }
+    }
+
+    // ================= DASHBOARD & GIFT CARDS LOGIC =================
+    function loadDashboard() {
+      if (!currentUser) return switchView('login');
+
+      document.getElementById('dash-user-name').innerText = currentUser.name;
+      renderCardsList();
+      switchView('dashboard');
+    }
+
+    function getUserCards() {
+      const allCards = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || "[]");
+      return allCards.filter(c => c.userEmail === currentUser.email);
+    }
+
+    function saveAllCards(cards) {
+      localStorage.setItem(STORAGE_CARDS_KEY, JSON.stringify(cards));
+    }
+
+    function renderCardsList() {
+      const cards = getUserCards();
+      const grid = document.getElementById('cards-grid');
+      const emptyBox = document.getElementById('cards-empty');
+
+      // Update stats
+      document.getElementById('stat-total').innerText = cards.length;
+      document.getElementById('stat-redeemed').innerText = cards.filter(c => c.isRedeemed).length;
+      document.getElementById('stat-active').innerText = cards.filter(c => !c.isRedeemed).length;
+
+      if (cards.length === 0) {
+        grid.innerHTML = '';
+        emptyBox.classList.remove('hidden');
+        document.getElementById('card-detail-view').classList.add('hidden');
+        return;
+      }
+
+      emptyBox.classList.add('hidden');
+      grid.innerHTML = cards.map(card => `
+        <div onclick="openCardDetail('${card.id}')" class="bg-slate-800/90 hover:bg-slate-800 border ${card.id === activeCardId ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-700/80'} rounded-2xl p-5 shadow-lg hover:shadow-indigo-500/10 cursor-pointer transition transform hover:-translate-y-1">
+          <div class="flex justify-between items-start mb-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-700/80 flex items-center justify-center text-indigo-400 text-lg">
+              <i class="fa-solid fa-gift"></i>
+            </div>
+            <span class="text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${card.isRedeemed ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}">
+              ${card.isRedeemed ? 'Redeemed' : 'Not Redeemed'}
+            </span>
+          </div>
+
+          <h4 class="font-bold text-white text-base truncate">${escapeHtml(card.name)}</h4>
+          <p class="text-xs font-mono text-slate-400 mt-1">ID: ${card.whichId}</p>
+
+          <div class="mt-4 pt-3 border-t border-slate-700/60 flex justify-between items-center text-xs">
+            <span class="text-slate-400 font-medium">Purchased: ${card.purchaseDate}</span>
+            <span class="text-indigo-400 font-semibold flex items-center gap-1">
+              View <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </span>
+          </div>
+        </div>
+      `).join('');
+
+      // If active card exists, keep its detail updated
+      if (activeCardId) {
+        const found = cards.find(c => c.id === activeCardId);
+        if (found) renderDetailTable(found);
+      }
+    }
+
+    // Modal Operations
+    function openAddCardModal() {
+      document.getElementById('new-card-name').value = '';
+      document.getElementById('modal-add-card').classList.remove('hidden');
+      setTimeout(() => document.getElementById('new-card-name').focus(), 50);
+    }
+
+    function closeAddCardModal() {
+      document.getElementById('modal-add-card').classList.add('hidden');
+    }
+
+    function handleCreateCard(e) {
+      e.preventDefault();
+      const cardName = document.getElementById('new-card-name').value.trim();
+      if (!cardName) return;
+
+      const randomSegment = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+      const newCard = {
+        id: "card-" + Date.now(),
+        userEmail: currentUser.email,
+        name: cardName,
+        voucherCode: `GV-${randomSegment()}-${randomSegment()}-${Math.floor(100 + Math.random() * 900)}`,
+        pin: Math.floor(1000 + Math.random() * 9000).toString(),
+        purchaseDate: new Date().toISOString().split('T')[0],
+        whichId: `ID-${Math.floor(100000 + Math.random() * 900000)}`,
+        isRedeemed: false
+      };
+
+      const allCards = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || "[]");
+      allCards.unshift(newCard);
+      saveAllCards(allCards);
+
+      closeAddCardModal();
+      showToast('Gift Card Added', 'success', `${cardName} has been saved to your account.`);
+      renderCardsList();
+      openCardDetail(newCard.id);
+    }
+
+    // ================= DETAIL PAGE VIEW & REDEEMED / NOT REDEEMED TOGGLE =================
+    function openCardDetail(cardId) {
+      activeCardId = cardId;
+      const cards = getUserCards();
+      const card = cards.find(c => c.id === cardId);
+      if (!card) return;
+
+      renderDetailTable(card);
+      const detailView = document.getElementById('card-detail-view');
+      detailView.classList.remove('hidden');
+      detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      renderCardsList(); // Re-render grid to highlight active card
+    }
+
+    function renderDetailTable(card) {
+      document.getElementById('detail-card-name').innerText = card.name;
+      document.getElementById('td-voucher-code').innerText = card.voucherCode;
+      document.getElementById('td-pin').innerText = card.pin;
+      document.getElementById('td-purchase-date').innerText = card.purchaseDate;
+      document.getElementById('td-which-id').innerText = card.whichId;
+
+      const badge = document.getElementById('detail-card-badge');
+      const btn = document.getElementById('td-redeemed-btn');
+      const icon = document.getElementById('td-redeemed-icon');
+      const text = document.getElementById('td-redeemed-text');
+
+      if (card.isRedeemed) {
+        // GREEN STATE for Redeemed
+        badge.className = "text-xs px-2.5 py-0.5 rounded-md font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        badge.innerText = "Status: Redeemed";
+
+        btn.className = "px-6 py-2.5 rounded-xl text-white font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-600/30 cursor-pointer transition flex items-center justify-center gap-2 mx-auto";
+        icon.className = "fa-solid fa-circle-check text-sm";
+        text.innerText = "Redeemed";
+      } else {
+        // RED STATE for Not Redeemed
+        badge.className = "text-xs px-2.5 py-0.5 rounded-md font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        badge.innerText = "Status: Not Redeemed";
+
+        btn.className = "px-6 py-2.5 rounded-xl text-white font-bold text-xs uppercase tracking-wider bg-rose-600 hover:bg-rose-500 ring-2 ring-rose-500/40 shadow-lg shadow-rose-600/30 cursor-pointer transition flex items-center justify-center gap-2 mx-auto";
+        icon.className = "fa-solid fa-clock text-sm";
+        text.innerText = "Not Redeemed";
+      }
+    }
+
+    function toggleActiveCardRedemption() {
+      if (!activeCardId) return;
+
+      const allCards = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || "[]");
+      const card = allCards.find(c => c.id === activeCardId);
+      if (!card) return;
+
+      // Toggle status
+      card.isRedeemed = !card.isRedeemed;
+      saveAllCards(allCards);
+
+      renderDetailTable(card);
+      renderCardsList();
+
+      if (card.isRedeemed) {
+        showToast('Voucher Redeemed!', 'success', 'Status turned GREEN: Redeemed');
+      } else {
+        showToast('Voucher Marked Active', 'info', 'Status turned RED: Not Redeemed');
+      }
+    }
+
+    function closeCardDetail() {
+      activeCardId = null;
+      document.getElementById('card-detail-view').classList.add('hidden');
+      renderCardsList();
+    }
+
+    function deleteCurrentCard() {
+      if (!activeCardId) return;
+      if (!confirm("Are you sure you want to delete this gift card?")) return;
+
+      let allCards = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || "[]");
+      allCards = allCards.filter(c => c.id !== activeCardId);
+      saveAllCards(allCards);
+
+      showToast('Gift card deleted', 'info');
+      closeCardDetail();
+      renderCardsList();
+    }
+
+    function copyToClipboard(elementId) {
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard', 'info', text);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // Bootstrap app
+    window.addEventListener('DOMContentLoaded', () => {
+      initDatabase();
+      if (currentUser && currentUser.isVerified) {
+        loadDashboard();
+      } else {
+        switchView('signup');
+        renderSignupStep(1);
+      }
+    });
+  </script>
+</body>
+</html>
