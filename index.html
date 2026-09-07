@@ -1,1060 +1,2512 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gift Card Hub - Secure Voucher Management</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-    .fade-in {
-      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoucherVault - Pro Gift Voucher Management</title>
 
-  <!-- ================= TOP NAVIGATION BAR ================= -->
-  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/60 sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3 cursor-pointer" onclick="navigateHome()">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-          <i class="fa-solid fa-gift text-lg"></i>
-        </div>
-        <div>
-          <span class="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
-            Voucher<span class="text-indigo-400">Vault</span>
-          </span>
-          <span class="text-[10px] text-slate-400 block -mt-1 font-medium">Google Identity Security</span>
-        </div>
-      </div>
+    <!-- PWA Metadata & Dynamic Manifest Link -->
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
 
-      <div id="nav-actions" class="flex items-center gap-2 sm:gap-3">
-        <!-- Injected via JavaScript based on auth state -->
-      </div>
-    </div>
-  </header>
+    <!-- Tailwind CSS & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-  <!-- ================= MAIN CONTAINER ================= -->
-  <main class="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-[-20px] opacity-0 pointer-events-none max-w-md shadow-2xl rounded-xl p-4 flex items-start gap-3 border text-sm">
-      <i id="toast-icon" class="fa-solid fa-circle-check text-lg mt-0.5"></i>
-      <div class="flex-1">
-        <p id="toast-title" class="font-semibold text-white"></p>
-        <p id="toast-msg" class="text-slate-300 text-xs mt-0.5"></p>
-      </div>
-      <button onclick="dismissToast()" class="text-slate-400 hover:text-white ml-2">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
+    <!-- jsPDF & AutoTable for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- ================= AUTH VIEW: SIGNUP (3-STEP PROCESS) ================= -->
-    <section id="view-signup" class="fade-in hidden max-w-lg mx-auto my-8">
-      <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl shadow-xl shadow-black/40 p-6 sm:p-8">
-        <div class="text-center mb-6">
-          <h2 class="text-2xl font-bold text-white tracking-tight">Create Account</h2>
-          <p class="text-slate-400 text-xs sm:text-sm mt-1">Complete the 3-step registration with Google Cloud Identity</p>
-        </div>
+    <!-- JsBarcode for real 1D Barcode rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
-        <!-- 3-Step Progress Indicators -->
-        <div class="relative flex justify-between items-center mb-8 px-2">
-          <div class="absolute top-1/2 left-4 right-4 h-0.5 bg-slate-700 -translate-y-1/2 z-0"></div>
-          <div id="step-progress-bar" class="absolute top-1/2 left-4 h-0.5 bg-indigo-500 -translate-y-1/2 z-0 transition-all duration-300 w-0"></div>
+    <!-- QRCode.js for 2D QR rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-          <!-- Step 1 Dot -->
-          <div class="relative z-10 flex flex-col items-center">
-            <div id="dot-step-1" class="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800 shadow-md">1</div>
-            <span class="text-[11px] font-medium text-slate-300 mt-1.5">Details</span>
-          </div>
-          <!-- Step 2 Dot -->
-          <div class="relative z-10 flex flex-col items-center">
-            <div id="dot-step-2" class="w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800">2</div>
-            <span class="text-[11px] font-medium text-slate-400 mt-1.5">Password</span>
-          </div>
-          <!-- Step 3 Dot -->
-          <div class="relative z-10 flex flex-col items-center">
-            <div id="dot-step-3" class="w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800">3</div>
-            <span class="text-[11px] font-medium text-slate-400 mt-1.5">Verification</span>
-          </div>
-        </div>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-        <!-- STEP 1: Personal Details -->
-        <form id="form-step-1" onsubmit="handleSignupStep1(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Full Name <span class="text-rose-400">*</span></label>
-            <div class="relative">
-              <i class="fa-regular fa-user absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="text" id="su-name" required placeholder="John Doe" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Email ID <span class="text-rose-400">*</span></label>
-            <div class="relative">
-              <i class="fa-regular fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="email" id="su-email" required placeholder="name@example.com" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Mobile Number <span class="text-slate-500 text-[10px] font-normal">(Optional)</span></label>
-            <div class="relative">
-              <i class="fa-solid fa-phone absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="tel" id="su-mobile" placeholder="+91 98765 43210" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
-            </div>
-          </div>
-
-          <button type="submit" class="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 text-sm mt-2">
-            <span>Continue to Password</span>
-            <i class="fa-solid fa-arrow-right text-xs"></i>
-          </button>
-        </form>
-
-        <!-- STEP 2: Password & Confirm Password -->
-        <form id="form-step-2" onsubmit="handleSignupStep2(event)" class="space-y-4 hidden">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Password <span class="text-rose-400">*</span></label>
-            <div class="relative">
-              <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="password" id="su-password" required minlength="8" placeholder="At least 8 characters" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
-              <button type="button" onclick="togglePasswordVisibility('su-password', this)" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-200">
-                <i class="fa-regular fa-eye text-sm"></i>
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Confirm Password <span class="text-rose-400">*</span></label>
-            <div class="relative">
-              <i class="fa-solid fa-shield-halved absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="password" id="su-confirm-password" required minlength="8" placeholder="Repeat your password" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
-              <button type="button" onclick="togglePasswordVisibility('su-confirm-password', this)" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-200">
-                <i class="fa-regular fa-eye text-sm"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="p-3 bg-slate-900/60 border border-slate-700/50 rounded-xl text-xs text-slate-400 space-y-1">
-            <p class="font-medium text-slate-300 flex items-center gap-1.5">
-              <i class="fa-solid fa-circle-info text-indigo-400"></i> Security Notice:
-            </p>
-            <p>Your password will be salted & hashed. A verification token is issued through Google Cloud Identity Platform.</p>
-          </div>
-
-          <div class="flex gap-3 pt-2">
-            <button type="button" onclick="renderSignupStep(1)" class="w-1/3 bg-slate-700/70 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 px-4 rounded-xl transition text-sm">
-              Back
-            </button>
-            <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition text-sm flex items-center justify-center gap-2">
-              <span>Create & Send Link</span>
-              <i class="fa-solid fa-paper-plane text-xs"></i>
-            </button>
-          </div>
-        </form>
-
-        <!-- STEP 3: Email Verification (Google Console Flow) -->
-        <div id="step-3-container" class="space-y-5 hidden text-center">
-          <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-3xl shadow-inner">
-            <i class="fa-solid fa-envelope-circle-check"></i>
-          </div>
-
-          <div>
-            <h3 class="text-lg font-bold text-white">Google Verification Link Sent!</h3>
-            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
-              Google Cloud Identity has dispatched a verification email to:
-            </p>
-            <p id="verify-email-display" class="font-mono text-sm text-indigo-300 font-semibold mt-1 bg-slate-900/80 py-1.5 px-3 rounded-lg inline-block border border-slate-700"></p>
-          </div>
-
-          <!-- Mock Google Mail / Verification Link Dispatch Simulation Box -->
-          <div class="bg-slate-900/90 border border-indigo-500/30 rounded-xl p-4 text-left shadow-lg">
-            <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
-              <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <i class="fa-brands fa-google text-rose-400"></i> Google Cloud Auth Dispatcher
-              </span>
-              <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-mono">Live Simulation</span>
-            </div>
-            <p class="text-xs text-slate-300 mb-2">Click the simulated email link below to verify this email address instantly:</p>
-            <div class="p-2.5 bg-slate-950 rounded-lg border border-slate-800 break-all text-xs font-mono text-slate-400 flex flex-col gap-2">
-              <span id="mock-link-preview" class="text-indigo-400"></span>
-              <button type="button" onclick="simulateEmailVerificationClick()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-2 shadow-md">
-                <i class="fa-solid fa-check-double"></i>
-                <span>Simulate Clicking Google Verification Link</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="text-xs text-slate-400 pt-1">
-            Already verified? 
-            <button onclick="switchView('login')" class="text-indigo-400 hover:text-indigo-300 font-semibold underline ml-1">Go to Login</button>
-          </div>
-        </div>
-
-        <div class="mt-6 pt-4 border-t border-slate-700/60 text-center text-xs text-slate-400">
-          Already have an account? 
-          <button onclick="switchView('login')" class="text-indigo-400 hover:text-indigo-300 font-semibold ml-1">Sign In</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= AUTH VIEW: LOGIN ================= -->
-    <section id="view-login" class="fade-in hidden max-w-md mx-auto my-12">
-      <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl shadow-xl shadow-black/40 p-6 sm:p-8">
-        <div class="text-center mb-6">
-          <h2 class="text-2xl font-bold text-white tracking-tight">Welcome Back</h2>
-          <p class="text-slate-400 text-xs sm:text-sm mt-1">Sign in to manage your gift cards and vouchers</p>
-        </div>
-
-        <form onsubmit="handleLogin(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Email ID</label>
-            <div class="relative">
-              <i class="fa-regular fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="email" id="login-email" required placeholder="name@example.com" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
-            </div>
-          </div>
-
-          <div>
-            <div class="flex justify-between items-center mb-1">
-              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Password</label>
-              <button type="button" onclick="switchView('forgot')" class="text-xs text-indigo-400 hover:text-indigo-300">Forgot Password?</button>
-            </div>
-            <div class="relative">
-              <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
-              <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-200">
-                <i class="fa-regular fa-eye text-sm"></i>
-              </button>
-            </div>
-          </div>
-
-          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 text-sm mt-2">
-            <span>Sign In</span>
-            <i class="fa-solid fa-right-to-bracket text-xs"></i>
-          </button>
-        </form>
-
-        <div class="mt-6 pt-4 border-t border-slate-700/60 text-center text-xs text-slate-400">
-          Don't have an account? 
-          <button onclick="switchView('signup')" class="text-indigo-400 hover:text-indigo-300 font-semibold ml-1">Create an account</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= AUTH VIEW: FORGOT PASSWORD ================= -->
-    <section id="view-forgot" class="fade-in hidden max-w-md mx-auto my-12">
-      <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl shadow-xl shadow-black/40 p-6 sm:p-8">
-        <div class="text-center mb-6">
-          <div class="w-12 h-12 mx-auto rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl mb-3 border border-amber-500/20">
-            <i class="fa-solid fa-key"></i>
-          </div>
-          <h2 class="text-2xl font-bold text-white tracking-tight">Forgot Password</h2>
-          <p class="text-slate-400 text-xs sm:text-sm mt-1">Receive a secure reset link through Google Console services</p>
-        </div>
-
-        <form id="form-forgot" onsubmit="handleForgotPassword(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Registered Email ID</label>
-            <div class="relative">
-              <i class="fa-regular fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-              <input type="email" id="forgot-email" required placeholder="name@example.com" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
-            </div>
-          </div>
-
-          <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 text-sm">
-            <span>Send Reset Link via Google</span>
-            <i class="fa-solid fa-paper-plane text-xs"></i>
-          </button>
-        </form>
-
-        <!-- Simulated Reset Action Box -->
-        <div id="forgot-reset-box" class="mt-4 p-3 bg-slate-900 border border-amber-500/30 rounded-xl text-xs space-y-2 hidden">
-          <p class="text-amber-300 font-semibold flex items-center gap-1.5">
-            <i class="fa-solid fa-envelope-open-text"></i> Google Console Reset Dispatched
-          </p>
-          <p class="text-slate-400">Click below to simulate opening the Google password reset link:</p>
-          <button onclick="promptQuickPasswordReset()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 py-1.5 rounded-lg font-medium">
-            Open Password Reset Dialog
-          </button>
-        </div>
-
-        <div class="mt-6 pt-4 border-t border-slate-700/60 text-center text-xs text-slate-400">
-          Remembered your credentials? 
-          <button onclick="switchView('login')" class="text-indigo-400 hover:text-indigo-300 font-semibold ml-1">Back to Login</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= DASHBOARD & GIFT CARDS VIEW ================= -->
-    <section id="view-dashboard" class="fade-in hidden space-y-8">
-      
-      <!-- Welcome Header & Quick Action -->
-      <div class="bg-gradient-to-r from-slate-800 via-indigo-950/40 to-slate-800 border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div class="flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full w-fit border border-emerald-500/20 mb-2">
-            <i class="fa-solid fa-shield-check"></i>
-            <span>Google Cloud Identity Verified</span>
-          </div>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Hello, <span id="dash-user-name" class="text-indigo-400">User</span>!
-          </h2>
-          <p class="text-slate-400 text-xs sm:text-sm mt-1">Manage and track your vouchers, secure pins, and redemption statuses.</p>
-        </div>
-
-        <button onclick="openAddCardModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-2 text-sm shrink-0">
-          <i class="fa-solid fa-plus"></i>
-          <span>Add New Gift Card</span>
-        </button>
-      </div>
-
-      <!-- Quick Stats -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex items-center gap-4 shadow-sm">
-          <div class="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-xl font-bold">
-            <i class="fa-solid fa-ticket"></i>
-          </div>
-          <div>
-            <p class="text-xs text-slate-400 font-medium">Total Gift Cards</p>
-            <p id="stat-total" class="text-xl font-bold text-white">0</p>
-          </div>
-        </div>
-
-        <div class="bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex items-center gap-4 shadow-sm">
-          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl font-bold">
-            <i class="fa-solid fa-circle-check"></i>
-          </div>
-          <div>
-            <p class="text-xs text-slate-400 font-medium">Redeemed</p>
-            <p id="stat-redeemed" class="text-xl font-bold text-emerald-400">0</p>
-          </div>
-        </div>
-
-        <div class="bg-slate-800/80 border border-slate-700/60 p-4 rounded-xl flex items-center gap-4 shadow-sm">
-          <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-xl font-bold">
-            <i class="fa-solid fa-clock"></i>
-          </div>
-          <div>
-            <p class="text-xs text-slate-400 font-medium">Unredeemed / Active</p>
-            <p id="stat-active" class="text-xl font-bold text-rose-400">0</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Gift Cards Section -->
-      <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-wallet text-indigo-400 text-sm"></i>
-            <span>Your Gift Card Collection</span>
-          </h3>
-          <span class="text-xs text-slate-400">Click any card to open its voucher page</span>
-        </div>
-
-        <!-- Cards List / Grid -->
-        <div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Dynamically populated -->
-        </div>
-
-        <!-- Empty State -->
-        <div id="cards-empty" class="hidden bg-slate-800/40 border-2 border-dashed border-slate-700/80 rounded-2xl p-10 text-center">
-          <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 text-2xl">
-            <i class="fa-solid fa-gifts"></i>
-          </div>
-          <h4 class="text-base font-semibold text-slate-200">No Gift Cards Added Yet</h4>
-          <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-4">Add your first voucher (e.g., Amazon, Apple, PlayStation) to store secure pins and track redemption status.</p>
-          <button onclick="openAddCardModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-4 rounded-xl text-xs transition">
-            + Add Gift Card Now
-          </button>
-        </div>
-      </div>
-
-      <!-- ================= SELECTED GIFT VOUCHER DETAIL PAGE ================= -->
-      <div id="card-detail-view" class="hidden fade-in bg-slate-800 border-2 border-indigo-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700 pb-5">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-md border border-indigo-500/20">Voucher Details Page</span>
-              <span id="detail-card-badge" class="text-xs px-2.5 py-0.5 rounded-md font-bold"></span>
-            </div>
-            <h3 id="detail-card-name" class="text-2xl font-extrabold text-white mt-1"></h3>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button onclick="deleteCurrentCard()" class="text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 font-medium px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
-              <i class="fa-regular fa-trash-can"></i>
-              <span>Delete Card</span>
-            </button>
-            <button onclick="closeCardDetail()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
-              <i class="fa-solid fa-xmark"></i>
-              <span>Close View</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Voucher Details Table as Specified in Prompt -->
-        <div class="overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-900/80">
-          <table class="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr class="bg-slate-800/90 text-slate-300 uppercase text-[11px] font-bold tracking-wider border-b border-slate-700">
-                <th class="py-3.5 px-4 font-bold"><i class="fa-solid fa-barcode text-indigo-400 mr-1.5"></i>Gift Voucher</th>
-                <th class="py-3.5 px-4 font-bold"><i class="fa-solid fa-key text-amber-400 mr-1.5"></i>Pin</th>
-                <th class="py-3.5 px-4 font-bold"><i class="fa-regular fa-calendar-days text-sky-400 mr-1.5"></i>Purchase Date</th>
-                <th class="py-3.5 px-4 font-bold"><i class="fa-solid fa-id-badge text-purple-400 mr-1.5"></i>Which ID</th>
-                <th class="py-3.5 px-4 font-bold text-center"><i class="fa-solid fa-toggle-on text-emerald-400 mr-1.5"></i>Redeemed or Not</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-800">
-              <tr class="hover:bg-slate-800/40 transition">
-                <!-- Gift Voucher -->
-                <td class="py-4 px-4 font-mono font-bold text-indigo-300 select-all">
-                  <div class="flex items-center gap-2">
-                    <span id="td-voucher-code"></span>
-                    <button onclick="copyToClipboard('td-voucher-code')" title="Copy Voucher Code" class="text-slate-400 hover:text-white text-xs">
-                      <i class="fa-regular fa-copy"></i>
-                    </button>
-                  </div>
-                </td>
-
-                <!-- Pin -->
-                <td class="py-4 px-4 font-mono font-bold text-amber-300 select-all">
-                  <div class="flex items-center gap-2">
-                    <span id="td-pin"></span>
-                    <button onclick="copyToClipboard('td-pin')" title="Copy Pin" class="text-slate-400 hover:text-white text-xs">
-                      <i class="fa-regular fa-copy"></i>
-                    </button>
-                  </div>
-                </td>
-
-                <!-- Purchase Date -->
-                <td id="td-purchase-date" class="py-4 px-4 text-slate-300 font-medium"></td>
-
-                <!-- Which ID -->
-                <td id="td-which-id" class="py-4 px-4 font-mono text-purple-300"></td>
-
-                <!-- Redeemed or Not (Interactive Green / Red Toggle Button) -->
-                <td class="py-4 px-4 text-center">
-                  <button id="td-redeemed-btn" onclick="toggleActiveCardRedemption()" class="px-5 py-2 rounded-xl text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-lg cursor-pointer transform active:scale-95 flex items-center justify-center gap-2 mx-auto">
-                    <span id="td-redeemed-icon"></span>
-                    <span id="td-redeemed-text"></span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 flex items-center justify-between text-xs text-slate-400">
-          <span class="flex items-center gap-2">
-            <i class="fa-solid fa-lightbulb text-amber-400"></i>
-            Click the <strong class="text-slate-200">"Redeemed or Not"</strong> button to toggle status: <span class="text-emerald-400 font-semibold">Green = Redeemed</span> and <span class="text-rose-400 font-semibold">Red = Not Redeemed</span>.
-          </span>
-          <span class="text-[11px] text-slate-500 font-mono">Syncs automatically</span>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- ================= ADD GIFT CARD MODAL ================= -->
-  <div id="modal-add-card" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl fade-in">
-      <div class="flex justify-between items-center mb-5">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-gift text-indigo-400"></i>
-          <span>Add New Gift Card</span>
-        </h3>
-        <button onclick="closeAddCardModal()" class="text-slate-400 hover:text-white">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-
-      <form onsubmit="handleCreateCard(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
-            Gift Card Name <span class="text-rose-400">*</span>
-          </label>
-          <input type="text" id="new-card-name" required placeholder="e.g. Amazon, Steam, Starbucks" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-        </div>
-
-        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-700/50 text-xs text-slate-400 space-y-1">
-          <p class="font-medium text-slate-300 flex items-center gap-1.5">
-            <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Auto-Generated Values:
-          </p>
-          <p>• <strong>Gift Voucher:</strong> High-entropy cryptographic voucher</p>
-          <p>• <strong>Pin:</strong> 4 to 6 digit security code</p>
-          <p>• <strong>Which ID:</strong> Google-standard unique identifier</p>
-          <p>• <strong>Purchase Date:</strong> Current date</p>
-        </div>
-
-        <div class="flex gap-3 pt-2">
-          <button type="button" onclick="closeAddCardModal()" class="w-1/3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-2.5 px-4 rounded-xl transition text-sm">
-            Cancel
-          </button>
-          <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition text-sm">
-            Save Gift Card
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ================= FOOTER ================= -->
-  <footer class="border-t border-slate-800 mt-auto py-6 bg-slate-900/80 text-center text-xs text-slate-500">
-    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
-      <p>© 2026 VoucherVault • Security Architecture compliant with Google Cloud Identity & Firebase Auth</p>
-      <div class="flex items-center gap-4 text-slate-400">
-        <span class="hover:text-slate-200 cursor-pointer" onclick="showToast('Encryption: AES-GCM 256-bit simulated', 'info')">Security Standard</span>
-        <span>•</span>
-        <span class="hover:text-slate-200 cursor-pointer" onclick="showToast('Single-file portable deployment', 'success')">Standalone Build</span>
-      </div>
-    </div>
-  </footer>
-
-  <!-- ================= APPLICATION LOGIC ================= -->
-  <script>
-    // App State Management using localStorage for persistence
-    const STORAGE_USERS_KEY = "vv_users_db";
-    const STORAGE_SESSION_KEY = "vv_current_session";
-    const STORAGE_CARDS_KEY = "vv_gift_cards_db";
-
-    let currentUser = null;
-    let tempSignupData = {};
-    let activeCardId = null;
-
-    // Initialize Mock DBs if empty
-    function initDatabase() {
-      if (!localStorage.getItem(STORAGE_USERS_KEY)) {
-        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify([]));
-      }
-      if (!localStorage.getItem(STORAGE_CARDS_KEY)) {
-        // Preload sample voucher for demonstration
-        const initialCards = [
-          {
-            id: "card-" + Date.now(),
-            userEmail: "demo@google.com",
-            name: "Amazon Prime Gift Card",
-            voucherCode: "AMZ-9942-8821-X",
-            pin: "7489",
-            purchaseDate: "2026-09-01",
-            whichId: "ID-582109",
-            isRedeemed: false
-          }
-        ];
-        localStorage.setItem(STORAGE_CARDS_KEY, JSON.stringify(initialCards));
-      }
-
-      // Check existing session
-      const savedSession = localStorage.getItem(STORAGE_SESSION_KEY);
-      if (savedSession) {
-        try {
-          currentUser = JSON.parse(savedSession);
-        } catch (e) {
-          currentUser = null;
+        * {
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
-      }
-    }
 
-    // View Routing
-    function switchView(viewName) {
-      const views = ['signup', 'login', 'forgot', 'dashboard'];
-      views.forEach(v => {
-        const el = document.getElementById(`view-${v}`);
-        if (el) el.classList.add('hidden');
-      });
+        .ambient-glow {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            filter: blur(130px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+            animation: float 20s infinite alternate ease-in-out;
+        }
 
-      const activeEl = document.getElementById(`view-${viewName}`);
-      if (activeEl) activeEl.classList.remove('hidden');
+        .glow-1 {
+            top: -100px;
+            left: -100px;
+            background: radial-gradient(circle, #6366f1, #4f46e5);
+        }
 
-      renderNav();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+        .glow-2 {
+            bottom: -100px;
+            right: -100px;
+            background: radial-gradient(circle, #ec4899, #8b5cf6);
+            animation-delay: -10s;
+        }
 
-    function navigateHome() {
-      if (currentUser && currentUser.isVerified) {
-        switchView('dashboard');
-      } else {
-        switchView('login');
-      }
-    }
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
 
-    function renderNav() {
-      const navActions = document.getElementById('nav-actions');
-      if (currentUser && currentUser.isVerified) {
-        navActions.innerHTML = `
-          <div class="flex items-center gap-3">
-            <div class="hidden sm:flex flex-col text-right">
-              <span class="text-xs font-semibold text-white">${escapeHtml(currentUser.name)}</span>
-              <span class="text-[10px] text-emerald-400 font-mono">Verified</span>
+            100% {
+                transform: translate(80px, 60px) scale(1.15);
+            }
+        }
+
+        .view-transition {
+            animation: viewEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes viewEnter {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.99);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-nav {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .btn-shine {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(60deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(30deg);
+            transition: transform 0.6s ease;
+        }
+
+        .btn-shine:hover::after {
+            transform: rotate(30deg) translate(50%, 50%);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-950 text-slate-100 min-h-screen flex flex-col relative selection:bg-indigo-500 selection:text-white"
+    onclick="closeProfileDropdownOutside(event)">
+
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="glass-nav sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between relative z-50">
+            <div class="flex items-center gap-3 cursor-pointer group" onclick="navigateHome()">
+                <!-- Custom Brand Logo SVG -->
+                <div
+                    class="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-xl shadow-indigo-500/25 group-hover:scale-105 transition duration-300">
+                    <div
+                        class="w-full h-full bg-slate-950/80 rounded-[14px] flex items-center justify-center backdrop-blur-sm">
+                        <svg class="w-6 h-6 text-indigo-400 group-hover:text-pink-400 transition duration-300"
+                            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L4 5V11.5C4 16.5 7.5 21 12 22C16.5 21 20 16.5 20 11.5V5L12 2Z"
+                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M9 11.5H15M12 8.5V14.5" stroke="#f472b6" stroke-width="1.8"
+                                stroke-linecap="round" />
+                            <circle cx="12" cy="11.5" r="4.5" stroke="#38bdf8" stroke-width="1.2"
+                                stroke-dasharray="2 2" />
+                        </svg>
+                    </div>
+                    <span
+                        class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full animate-ping"></span>
+                    <span
+                        class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full"></span>
+                </div>
+                <div>
+                    <span class="font-extrabold text-lg tracking-tight text-white flex items-center gap-1">
+                        Voucher<span
+                            class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">Vault</span>
+                    </span>
+                    <span class="text-[10px] text-slate-400 block -mt-1 font-semibold tracking-wider uppercase">Smart
+                        Cloud Vault</span>
+                </div>
             </div>
-            <button onclick="handleLogout()" class="bg-slate-700/80 hover:bg-rose-600/90 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 border border-slate-600">
-              <i class="fa-solid fa-arrow-right-from-bracket"></i>
-              <span>Logout</span>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- PWA Install Button -->
+                <button id="btn-pwa-install" onclick="installPWA()"
+                    class="hidden bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-mobile-screen-button text-xs"></i>
+                    <span class="hidden sm:inline">Install App</span>
+                </button>
+
+                <div id="nav-actions" class="relative flex items-center gap-3"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 relative z-10">
+        <!-- Universal Notification Toast -->
+        <div id="toast"
+            class="fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-[-20px] opacity-0 pointer-events-none max-w-md shadow-2xl rounded-2xl p-4 flex items-start gap-3 border text-sm bg-slate-900 border-slate-700">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-lg mt-0.5"></i>
+            <div class="flex-1">
+                <p id="toast-title" class="font-bold text-white"></p>
+                <p id="toast-msg" class="text-slate-300 text-xs mt-0.5"></p>
+            </div>
+            <button onclick="dismissToast()" class="text-slate-400 hover:text-white ml-2 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- ================= SECURE GIFT CLAIM VIEW (FOR RECIPIENTS) ================= -->
+        <section id="view-claim" class="view-transition hidden max-w-md mx-auto my-10">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 border border-indigo-500/30 relative shadow-2xl">
+                <div class="text-center mb-6">
+                    <div
+                        class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-500 to-indigo-500 flex items-center justify-center text-white text-2xl mx-auto mb-3 shadow-lg shadow-indigo-500/25">
+                        <i class="fa-solid fa-gift"></i>
+                    </div>
+                    <span
+                        class="text-[10px] uppercase tracking-widest font-extrabold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">Secure
+                        Gift Delivery</span>
+                    <h2 id="claim-app-title" class="text-2xl font-black text-white mt-2">Special Gift Voucher</h2>
+                    <p class="text-xs text-slate-400 mt-1">Shared securely with you via VoucherVault</p>
+                </div>
+
+                <!-- Passcode Prompt -->
+                <div id="claim-passcode-box" class="space-y-4 mb-4 hidden">
+                    <div
+                        class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300 flex items-center gap-2">
+                        <i class="fa-solid fa-lock text-sm"></i>
+                        <span>This gift is protected by a secret passcode.</span>
+                    </div>
+                    <input type="password" id="input-claim-passcode" placeholder="Enter secret passcode"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition" />
+                    <button onclick="unlockClaimWithPasscode()"
+                        class="btn-shine w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-indigo-600/20">
+                        Unlock Gift Voucher
+                    </button>
+                </div>
+
+                <!-- Decrypted Voucher Card Display -->
+                <div id="claim-voucher-card" class="space-y-4 hidden">
+                    <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-700/80 space-y-4">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Gift Voucher
+                                Code</span>
+                            <div class="flex items-center justify-between mt-1">
+                                <span id="claim-display-voucher"
+                                    class="font-mono font-bold text-base text-indigo-300 select-all truncate"></span>
+                                <button
+                                    onclick="copyCode(this, document.getElementById('claim-display-voucher').innerText, 'Voucher Code')"
+                                    class="p-2 text-slate-400 hover:text-white rounded-lg transition">
+                                    <i class="fa-regular fa-copy text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-800">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Voucher
+                                Pin</span>
+                            <div class="flex items-center justify-between mt-1">
+                                <span id="claim-display-pin"
+                                    class="font-mono font-bold text-base text-amber-300 select-all tracking-wider"></span>
+                                <button
+                                    onclick="copyCode(this, document.getElementById('claim-display-pin').innerText, 'Pin')"
+                                    class="p-2 text-slate-400 hover:text-white rounded-lg transition">
+                                    <i class="fa-regular fa-copy text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="claim-amount-row"
+                            class="pt-3 border-t border-slate-800 flex justify-between items-center hidden">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Voucher
+                                Value</span>
+                            <span id="claim-display-amount" class="font-mono font-bold text-emerald-400 text-sm"></span>
+                        </div>
+                    </div>
+
+                    <!-- Direct Store Redemption on Claim Page -->
+                    <div id="claim-store-redirect-box" class="hidden">
+                        <button id="btn-claim-store"
+                            class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            <span id="claim-store-btn-text">Redeem on Official Store</span>
+                        </button>
+                    </div>
+
+                    <!-- Recipient Barcode / QR Section -->
+                    <div class="bg-white p-4 rounded-2xl text-center shadow-lg">
+                        <svg id="claim-barcode" class="max-w-full mx-auto"></svg>
+                    </div>
+
+                    <div id="claim-burn-notice"
+                        class="p-3 bg-slate-900 rounded-xl border border-slate-800 text-[11px] text-slate-400 text-center flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-fire-flame-curved text-rose-400"></i>
+                        <span id="claim-burn-text">One-time view: this gift link will now expire.</span>
+                    </div>
+
+                    <button onclick="navigateHome()"
+                        class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">
+                        Go to VoucherVault Homepage
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 3-STEP SIGNUP VIEW ================= -->
+        <section id="view-signup" class="view-transition hidden max-w-lg mx-auto my-8">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+                <div class="text-center mb-6">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl mx-auto mb-3">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-white tracking-tight">Create an Account</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm mt-1">Direct Google Cloud Identity verification flow</p>
+                </div>
+
+                <div class="relative flex justify-between items-center mb-8 px-2">
+                    <div class="absolute top-1/2 left-4 right-4 h-0.5 bg-slate-800 -translate-y-1/2 z-0"></div>
+                    <div id="step-progress-bar"
+                        class="absolute top-1/2 left-4 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 -translate-y-1/2 z-0 transition-all duration-300 w-0">
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div id="dot-step-1"
+                            class="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-900 shadow-md">
+                            1</div>
+                        <span class="text-[11px] font-semibold text-slate-300 mt-1.5">Details</span>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div id="dot-step-2"
+                            class="w-8 h-8 rounded-full bg-slate-800 text-slate-500 font-bold text-xs flex items-center justify-center ring-4 ring-slate-900">
+                            2</div>
+                        <span class="text-[11px] font-semibold text-slate-500 mt-1.5">Password</span>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div id="dot-step-3"
+                            class="w-8 h-8 rounded-full bg-slate-800 text-slate-500 font-bold text-xs flex items-center justify-center ring-4 ring-slate-900">
+                            3</div>
+                        <span class="text-[11px] font-semibold text-slate-500 mt-1.5">Verify</span>
+                    </div>
+                </div>
+
+                <!-- Step 1 -->
+                <form id="form-step-1" onsubmit="handleSignupStep1(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">Full Name
+                            *</label>
+                        <input type="text" id="su-name" required placeholder="John Doe"
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">Email ID
+                            *</label>
+                        <input type="email" id="su-email" required placeholder="name@example.com"
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">Mobile
+                            Number <span class="text-slate-500 font-normal">(Optional)</span></label>
+                        <input type="tel" id="su-mobile" placeholder="+91 98765 43210"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition" />
+                    </div>
+                    <button type="submit"
+                        class="btn-shine w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2">
+                        <span>Continue to Password</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </form>
+
+                <!-- Step 2 -->
+                <form id="form-step-2" onsubmit="handleSignupStep2(event)" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">Password
+                            *</label>
+                        <input type="password" id="su-password" required minlength="6"
+                            placeholder="At least 6 characters"
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">Confirm
+                            Password *</label>
+                        <input type="password" id="su-confirm-password" required minlength="6"
+                            placeholder="Repeat password"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition" />
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="renderSignupStep(1)"
+                            class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-sm transition">Back</button>
+                        <button type="submit" id="btn-submit-signup"
+                            class="btn-shine w-2/3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition">
+                            <span>Send Link via Google</span>
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Step 3 -->
+                <div id="step-3-container" class="space-y-5 hidden text-center">
+                    <div
+                        class="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-3xl border border-emerald-500/20 animate-pulse">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Google Verification Link Sent!</h3>
+                    <p class="text-xs text-slate-400">Firebase has automatically dispatched an email with the
+                        verification link to:</p>
+                    <p id="verify-email-display"
+                        class="font-mono text-xs text-indigo-300 bg-slate-900/80 py-2 px-4 rounded-xl border border-slate-800 inline-block font-semibold">
+                    </p>
+
+                    <div
+                        class="p-4 bg-slate-900/70 border border-slate-800 rounded-2xl text-xs text-slate-300 space-y-1.5 text-left">
+                        <p><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> 1. Open your inbox (check Spam
+                            folder if needed).</p>
+                        <p><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> 2. Click the official link from
+                            Google / Firebase.</p>
+                        <p><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> 3. Return here and press the button
+                            below.</p>
+                    </div>
+
+                    <button onclick="checkEmailVerifiedStatus()"
+                        class="btn-shine w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>Check Verification Status</span>
+                    </button>
+                    <button onclick="resendRealVerificationEmail()"
+                        class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold underline block mx-auto transition">Resend
+                        Verification Email</button>
+                </div>
+
+                <div class="mt-6 pt-5 border-t border-slate-800 text-center text-xs text-slate-400">
+                    Already have an account?
+                    <button onclick="switchView('login')"
+                        class="text-indigo-400 hover:text-indigo-300 font-bold ml-1 transition underline">Sign
+                        In</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= LOGIN VIEW ================= -->
+        <section id="view-login" class="view-transition hidden max-w-md mx-auto my-12">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+                <div class="text-center mb-6">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl mx-auto mb-3">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-white tracking-tight">Welcome Back</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm mt-1">Enter your credentials to manage your vouchers</p>
+                </div>
+
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">Email
+                            Address</label>
+                        <input type="email" id="login-email" required placeholder="name@example.com"
+                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label
+                                class="block text-xs font-bold uppercase tracking-wider text-slate-300">Password</label>
+                            <button type="button" onclick="switchView('forgot')"
+                                class="text-xs text-indigo-400 hover:text-indigo-300 transition">Forgot?</button>
+                        </div>
+                        <input type="password" id="login-password" required placeholder="••••••••"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition" />
+                    </div>
+                    <button type="submit" id="btn-login"
+                        class="btn-shine w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-indigo-600/25">
+                        Sign In
+                    </button>
+                </form>
+
+                <p class="mt-6 pt-5 border-t border-slate-800 text-center text-xs text-slate-400">
+                    Don't have an account?
+                    <button onclick="switchView('signup')"
+                        class="text-indigo-400 hover:text-indigo-300 font-bold ml-1 transition underline">Create
+                        one</button>
+                </p>
+            </div>
+        </section>
+
+        <!-- ================= FORGOT PASSWORD VIEW ================= -->
+        <section id="view-forgot" class="view-transition hidden max-w-md mx-auto my-12">
+            <div class="glass-card rounded-3xl p-6 sm:p-8">
+                <div class="text-center mb-6">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-xl mx-auto mb-3">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-white tracking-tight">Reset Password</h2>
+                    <p class="text-xs text-slate-400 mt-1">Google / Firebase will send a direct password recovery email
+                    </p>
+                </div>
+
+                <form onsubmit="handleForgotPassword(event)" class="space-y-4">
+                    <input type="email" id="forgot-email" required placeholder="Enter registered email address"
+                        class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition" />
+                    <button type="submit" id="btn-forgot"
+                        class="btn-shine w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-amber-500/20">
+                        Send Recovery Link
+                    </button>
+                </form>
+                <button onclick="switchView('login')"
+                    class="text-xs text-slate-400 hover:text-slate-200 block text-center mt-5 w-full transition">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Back to Login
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= APPLICATIONS DASHBOARD ================= -->
+        <section id="view-apps" class="view-transition hidden space-y-6">
+            <div
+                class="glass-card rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <div
+                        class="flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full w-fit border border-emerald-500/20 mb-2">
+                        <i class="fa-solid fa-shield-check"></i>
+                        <span>Google Identity Active • PWA Ready</span>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Applications</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Select or create an application (e.g., Flipkart,
+                        Amazon, Myntra) to open its vault.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="requestBrowserNotificationPermission()" id="btn-enable-push"
+                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold py-3 px-4 rounded-2xl text-xs flex items-center gap-2 transition">
+                        <i class="fa-solid fa-bell text-amber-400"></i>
+                        <span>Alert Preferences</span>
+                    </button>
+                    <button onclick="openAddAppModal()"
+                        class="btn-shine bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add Application</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Applications Grid -->
+            <div id="apps-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+            <div id="apps-empty"
+                class="hidden text-center py-16 glass-card rounded-3xl border border-dashed border-slate-800">
+                <div
+                    class="w-16 h-16 mx-auto rounded-2xl bg-slate-800/60 flex items-center justify-center text-slate-600 text-3xl mb-3">
+                    <i class="fa-solid fa-box-open"></i>
+                </div>
+                <h4 class="font-bold text-slate-300 text-base">No Applications Found</h4>
+                <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-4">Add your first application category like
+                    Amazon, Flipkart, or Myntra to store gift cards.</p>
+                <button onclick="openAddAppModal()"
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold py-2 px-4 rounded-xl text-xs transition">
+                    + Add First App
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= DEDICATED APP VOUCHERS PAGE ================= -->
+        <section id="view-vouchers" class="view-transition hidden space-y-6">
+            <!-- Header Banner & Action Buttons -->
+            <div
+                class="glass-card rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <button onclick="switchView('apps')"
+                        class="text-indigo-400 hover:text-indigo-300 text-xs flex items-center gap-1.5 mb-2 font-bold transition">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back to All Applications</span>
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <h2 id="current-app-heading" class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                        </h2>
+                        <!-- Global Store Shortcut in Header -->
+                        <button id="btn-header-store-link" onclick="openDirectStoreRedeem(activeAppId)"
+                            title="Open Store Redemption Page"
+                            class="hidden bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs px-3 py-1 rounded-xl font-bold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            <span>Store Link</span>
+                        </button>
+                    </div>
+                    <p class="text-slate-400 text-xs mt-0.5">Voucher, PIN, Expiry & Financial Tracking</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <button onclick="sendBalanceUpdateViaWhatsApp()" title="Share Active Balance via WhatsApp"
+                        class="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center gap-1.5 transition">
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
+                        <span>WhatsApp Summary</span>
+                    </button>
+
+                    <!-- Export Dropdown -->
+                    <div class="relative inline-block text-left">
+                        <button onclick="toggleExportMenu(event)"
+                            class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-2 transition">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Export</span>
+                            <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        </button>
+                        <div id="export-menu"
+                            class="hidden absolute right-0 mt-2 w-44 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl py-1 z-30">
+                            <button onclick="exportToCSV()"
+                                class="w-full text-left px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv text-emerald-400"></i> Export CSV
+                            </button>
+                            <button onclick="exportToPDF()"
+                                class="w-full text-left px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-file-pdf text-rose-400"></i> Export PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <button onclick="openAddVoucherModal()"
+                        class="btn-shine bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-5 rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add Voucher Details</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Financial Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="glass-card p-4 rounded-2xl border border-slate-800 flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Total Stored</p>
+                        <p id="sum-total" class="text-xl font-black text-white">₹0.00</p>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4 rounded-2xl border border-slate-800 flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Redeemed Value</p>
+                        <p id="sum-redeemed" class="text-xl font-black text-emerald-400">₹0.00</p>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4 rounded-2xl border border-slate-800 flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Available Balance</p>
+                        <p id="sum-available" class="text-xl font-black text-amber-400">₹0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Filter Toolbar -->
+            <div
+                class="glass-card p-4 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+                    <input type="text" id="voucher-search" oninput="applyFiltersAndSearch()"
+                        placeholder="Search by Voucher or PIN..."
+                        class="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" />
+                </div>
+
+                <div
+                    class="flex items-center gap-1.5 self-center sm:self-auto bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+                    <button onclick="setFilterStatus('all')" id="btn-filter-all"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-600 text-white">All</button>
+                    <button onclick="setFilterStatus('active')" id="btn-filter-active"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">Active</button>
+                    <button onclick="setFilterStatus('redeemed')" id="btn-filter-redeemed"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">Redeemed</button>
+                </div>
+            </div>
+
+            <!-- Voucher Table -->
+            <div class="overflow-x-auto rounded-3xl border border-slate-800 glass-card shadow-2xl">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead
+                        class="bg-slate-900/90 text-slate-400 uppercase text-[11px] font-bold tracking-wider border-b border-slate-800">
+                        <tr>
+                            <th class="py-4 px-5">Gift Voucher</th>
+                            <th class="py-4 px-5">Pin</th>
+                            <th class="py-4 px-5">Amount</th>
+                            <th class="py-4 px-5">Purchase Date</th>
+                            <th class="py-4 px-5">Expiry Status</th>
+                            <th class="py-4 px-5 text-center">Reedemed or Not</th>
+                            <th class="py-4 px-5 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vouchers-table-body" class="divide-y divide-slate-800/60 font-medium"></tbody>
+                </table>
+                <div id="vouchers-empty" class="hidden text-center py-12 text-xs text-slate-500">
+                    No vouchers match your criteria or vault is empty.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="mt-auto border-t border-slate-800/80 bg-slate-950/80 text-xs text-slate-500 py-8 relative z-10">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <div
+                    class="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-shield"></i>
+                </div>
+                <p class="font-semibold text-slate-400">@ All Rights Reserved</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4 text-slate-400">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-lock text-emerald-400"></i> 256-bit SSL
+                    Encrypted</span>
+                <span>•</span>
+                <span class="flex items-center gap-1.5"><i class="fa-brands fa-google text-rose-400"></i> Google
+                    Identity Verified</span>
+                <span>•</span>
+                <a href="javascript:void(0)"
+                    onclick="showToast('Security Policy: Client & Cloud records isolated.', 'info')"
+                    class="hover:text-slate-200 transition">Privacy & Terms</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL: ADD APPLICATION -->
+    <div id="modal-add-app"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass-card rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl view-transition">
+            <h3 class="text-xl font-bold text-white mb-1">Add Application</h3>
+            <p class="text-xs text-slate-400 mb-5">e.g. Flipkart, Amazon, Myntra, Swiggy, Apple, Steam</p>
+            <form onsubmit="handleCreateApp(event)" class="space-y-4">
+                <input type="text" id="new-app-name" required placeholder="Application Name *"
+                    class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition" />
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAddAppModal()"
+                        class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">Cancel</button>
+                    <button type="submit"
+                        class="w-1/2 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-xs font-bold transition">Save
+                        App</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD VOUCHER -->
+    <div id="modal-add-voucher"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass-card rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl view-transition">
+            <h3 class="text-xl font-bold text-white mb-1">Add Gift Voucher</h3>
+            <p class="text-xs text-slate-400 mb-5">Fill in the voucher details below</p>
+            <form onsubmit="handleCreateVoucher(event)" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block font-bold uppercase text-slate-300 mb-1">Gift Voucher *</label>
+                    <input type="text" id="input-voucher" required placeholder="e.g. GV-FKRT-9821389"
+                        class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition" />
+                </div>
+                <div>
+                    <label class="block font-bold uppercase text-slate-300 mb-1">Pin *</label>
+                    <input type="text" id="input-pin" required placeholder="e.g. 5839"
+                        class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition" />
+                </div>
+                <div>
+                    <label class="block font-bold uppercase text-slate-300 mb-1">Voucher Amount / Value <span
+                            class="text-slate-500 font-normal">(Optional, e.g. 500)</span></label>
+                    <input type="number" step="0.01" id="input-amount" placeholder="500.00"
+                        class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition" />
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold uppercase text-slate-300 mb-1">Purchase Date <span
+                                class="text-slate-500 font-normal">(Optional)</span></label>
+                        <input type="date" id="input-date"
+                            class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block font-bold uppercase text-slate-300 mb-1">Expiry Date <span
+                                class="text-slate-500 font-normal">(Optional)</span></label>
+                        <input type="date" id="input-expiry"
+                            class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 transition" />
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-3">
+                    <button type="button" onclick="closeAddVoucherModal()"
+                        class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">Cancel</button>
+                    <button type="submit"
+                        class="w-1/2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold transition">Save
+                        Voucher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: SECURE GIFT LINK GENERATOR -->
+    <div id="modal-gift-link"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div
+            class="glass-card rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl view-transition border border-indigo-500/30">
+            <div class="flex items-center gap-3 mb-4">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-indigo-500 text-white flex items-center justify-center text-xl shadow-lg shadow-indigo-500/25">
+                    <i class="fa-solid fa-gift"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Create Secure Gift Link</h3>
+                    <p class="text-xs text-slate-400">Share this voucher safely without sharing your account</p>
+                </div>
+            </div>
+
+            <div class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block font-bold uppercase text-slate-300 mb-1">Secret Passcode <span
+                            class="text-slate-500 font-normal">(Optional)</span></label>
+                    <input type="text" id="gift-link-passcode" placeholder="Recipient must enter this to open"
+                        class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+                </div>
+
+                <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="gift-link-burn" checked
+                            class="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0" />
+                        <span class="text-xs text-slate-300 font-medium">Burn on Read (Self-destruct after recipient
+                            views it once)</span>
+                    </label>
+                </div>
+
+                <div id="gift-link-result-box" class="hidden space-y-2 pt-2">
+                    <span class="text-[10px] uppercase font-bold text-emerald-400">Generated Secure Link:</span>
+                    <div class="flex gap-2">
+                        <input type="text" id="gift-link-output" readonly
+                            class="flex-1 bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-xs font-mono text-emerald-300 select-all" />
+                        <button onclick="copyCode(this, document.getElementById('gift-link-output').value, 'Gift Link')"
+                            class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 rounded-xl font-bold text-xs transition">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeGiftLinkModal()"
+                        class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">Close</button>
+                    <button type="button" id="btn-create-gift-link" onclick="generateSecureGiftLinkAction()"
+                        class="w-1/2 btn-shine bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/25">Generate
+                        Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: BARCODE & QR CODE VIEWER -->
+    <div id="modal-qr"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div
+            class="glass-card rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl text-center view-transition border border-slate-700/80">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-barcode text-indigo-400"></i>
+                    <span>Scannable Code</span>
+                </h3>
+                <button onclick="closeQrModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <div class="flex justify-center gap-2 mb-4 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                <button onclick="switchBarcodeTab('barcode')" id="tab-btn-barcode"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-600 text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-barcode"></i> 1D Barcode
+                </button>
+                <button onclick="switchBarcodeTab('qr')" id="tab-btn-qr"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-qrcode"></i> 2D QR Code
+                </button>
+            </div>
+
+            <p id="qr-modal-code"
+                class="text-xs font-mono font-bold text-indigo-300 mb-4 bg-slate-900/90 py-1.5 px-3 rounded-lg border border-slate-800 truncate">
+            </p>
+
+            <div id="view-barcode-container"
+                class="bg-white p-4 rounded-2xl flex flex-col items-center justify-center shadow-lg mb-4 overflow-x-auto min-h-[160px]">
+                <svg id="barcode-canvas" class="max-w-full"></svg>
+            </div>
+
+            <div id="view-qr-container"
+                class="hidden bg-white p-4 rounded-2xl flex items-center justify-center shadow-lg mb-4 min-h-[160px]">
+                <div id="qrcode-canvas" class="flex justify-center"></div>
+            </div>
+
+            <button onclick="closeQrModal()"
+                class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">
+                Done / Close
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: DELETE APPLICATION CONFIRMATION -->
+    <div id="modal-delete-app"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div
+            class="glass-card rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl view-transition text-center border border-rose-500/30">
+            <div
+                class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-store-slash"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-1">Delete Application</h3>
+            <p id="del-app-msg" class="text-xs text-slate-400 mb-6 leading-relaxed">
+                Are you sure you want to delete this application and all of its stored vouchers? This action cannot be
+                undone.
+            </p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteAppModal()"
+                    class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">Cancel</button>
+                <button onclick="confirmDeleteApp()"
+                    class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-lg shadow-rose-600/25">Yes,
+                    Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DELETE VOUCHER CONFIRMATION -->
+    <div id="modal-delete-voucher"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div
+            class="glass-card rounded-3xl p-6 max-w-sm w-full shadow-2xl view-transition text-center border border-rose-500/20">
+            <div
+                class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-1">Delete Voucher</h3>
+            <p class="text-xs text-slate-400 mb-6">Are you sure you want to remove this voucher from the application
+                vault?</p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteVoucherModal()"
+                    class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">Cancel</button>
+                <button onclick="confirmDeleteVoucher()"
+                    class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-xl text-xs font-bold transition">Yes,
+                    Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: LOGOUT CONFIRMATION -->
+    <div id="modal-logout-confirm"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div
+            class="glass-card rounded-3xl p-6 max-w-sm w-full shadow-2xl view-transition text-center border border-amber-500/20">
+            <div
+                class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-1">Confirm Logout</h3>
+            <p class="text-xs text-slate-400 mb-6">Are you sure you want to log out of your session?</p>
+            <div class="flex gap-3">
+                <button onclick="closeLogoutModal()"
+                    class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">Cancel</button>
+                <button onclick="confirmLogout()"
+                    class="w-1/2 bg-amber-500 hover:bg-amber-600 text-slate-950 py-2.5 rounded-xl text-xs font-bold transition">Yes,
+                    Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PERMANENT ACCOUNT DELETION -->
+    <div id="modal-delete-account"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div
+            class="glass-card rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl view-transition border border-rose-500/30">
+            <div
+                class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center text-xl mx-auto mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white text-center mb-1">Delete Account Permanently</h3>
+            <p class="text-xs text-rose-300/80 text-center mb-5">
+                Warning: This action cannot be undone. All your apps, gift vouchers, and pins will be deleted
+                permanently.
+            </p>
+
+            <form onsubmit="handleDeleteAccountPermanent(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-bold uppercase text-slate-300 mb-1">Enter Your Full Name *</label>
+                    <input type="text" id="del-confirm-name" required placeholder="Your full name"
+                        class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500 transition" />
+                </div>
+                <div>
+                    <label class="block font-bold uppercase text-slate-300 mb-1">Enter Your Password *</label>
+                    <input type="password" id="del-confirm-password" required placeholder="••••••••"
+                        class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500 transition" />
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeDeleteAccountModal()"
+                        class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition">Cancel</button>
+                    <button type="submit" id="btn-delete-acc-confirm"
+                        class="w-1/2 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl text-xs font-bold transition">Delete
+                        Forever</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FIREBASE AUTH & FIRESTORE CLOUD INTEGRATION -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import {
+            getAuth,
+            createUserWithEmailAndPassword,
+            sendEmailVerification,
+            signInWithEmailAndPassword,
+            sendPasswordResetEmail,
+            signOut,
+            onAuthStateChanged,
+            updateProfile,
+            deleteUser,
+            reauthenticateWithCredential,
+            EmailAuthProvider
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            setDoc,
+            getDoc,
+            deleteDoc
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        // -----------------------------------------------------------------
+        // REPLACE WITH YOUR REAL FIREBASE KEYS FROM FIREBASE CONSOLE
+        // -----------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyCoDik0s1fdaZZHlY2ZMyOX8K6RGeU-6Fg",
+            authDomain: "gift-9735a.firebaseapp.com",
+            projectId: "gift-9735a",
+            storageBucket: "gift-9735a.firebasestorage.app",
+            messagingSenderId: "728818022383",
+            appId: "1:728818022383:web:52815a8c530bbcc3a0e81a",
+            measurementId: "G-4F92YN7Q9R"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const STORAGE_APPS = "vv_apps_list";
+        const STORAGE_VOUCHERS = "vv_vouchers_list";
+        const STORAGE_SHARED_GIFTS = "vv_shared_gifts_cache";
+
+        let tempSignup = {};
+        let activeAppId = null;
+        let pendingVoucherDeleteId = null;
+        let pendingAppDeleteId = null;
+        let currentFilterStatus = "all";
+        let unmaskedPins = new Set();
+        let currentActiveCodeForBarcode = "";
+        let activeGiftShareVoucher = null;
+        let activeClaimGiftData = null;
+        let deferredInstallPrompt = null;
+
+        // Direct Store Redirection Directory
+        const STORE_REDEEM_URLS = {
+            "amazon": "https://www.amazon.in/gp/css/gc/payment",
+            "flipkart": "https://www.flipkart.com/account/giftcards",
+            "myntra": "https://www.myntra.com/my/giftcard",
+            "swiggy": "https://www.swiggy.com/my-account/gift-cards",
+            "zomato": "https://www.zomato.com",
+            "apple": "https://apps.apple.com/redeem",
+            "google play": "https://play.google.com/redeem",
+            "steam": "https://store.steampowered.com/account/redeemwalletcode",
+            "playstation": "https://store.playstation.com",
+            "netflix": "https://www.netflix.com/redeem",
+            "starbucks": "https://www.starbucks.in/cards",
+            "uber": "https://m.uber.com",
+            "makemytrip": "https://www.makemytrip.com/gift-cards/",
+            "bookmyshow": "https://in.bookmyshow.com",
+            "dominos": "https://www.dominos.co.in"
+        };
+
+        // Global bindings for HTML inline onclick
+        window.switchView = switchView;
+        window.navigateHome = navigateHome;
+        window.showToast = showToast;
+        window.dismissToast = dismissToast;
+        window.toggleProfileDropdown = toggleProfileDropdown;
+        window.closeProfileDropdownOutside = closeProfileDropdownOutside;
+        window.renderSignupStep = renderSignupStep;
+        window.handleSignupStep1 = handleSignupStep1;
+        window.handleSignupStep2 = handleSignupStep2;
+        window.checkEmailVerifiedStatus = checkEmailVerifiedStatus;
+        window.resendRealVerificationEmail = resendRealVerificationEmail;
+        window.handleLogin = handleLogin;
+        window.promptLogout = promptLogout;
+        window.closeLogoutModal = closeLogoutModal;
+        window.confirmLogout = confirmLogout;
+        window.openDeleteAccountModal = openDeleteAccountModal;
+        window.closeDeleteAccountModal = closeDeleteAccountModal;
+        window.handleDeleteAccountPermanent = handleDeleteAccountPermanent;
+        window.handleForgotPassword = handleForgotPassword;
+        window.openAddAppModal = openAddAppModal;
+        window.closeAddAppModal = closeAddAppModal;
+        window.handleCreateApp = handleCreateApp;
+        window.promptDeleteApp = promptDeleteApp;
+        window.closeDeleteAppModal = closeDeleteAppModal;
+        window.confirmDeleteApp = confirmDeleteApp;
+        window.openAppVouchers = openAppVouchers;
+        window.openAddVoucherModal = openAddVoucherModal;
+        window.closeAddVoucherModal = closeAddVoucherModal;
+        window.handleCreateVoucher = handleCreateVoucher;
+        window.toggleVoucherRedeemed = toggleVoucherRedeemed;
+        window.promptDeleteVoucher = promptDeleteVoucher;
+        window.closeDeleteVoucherModal = closeDeleteVoucherModal;
+        window.confirmDeleteVoucher = confirmDeleteVoucher;
+        window.copyCode = copyCode;
+        window.togglePinVisibility = togglePinVisibility;
+        window.openQrModal = openQrModal;
+        window.closeQrModal = closeQrModal;
+        window.switchBarcodeTab = switchBarcodeTab;
+        window.applyFiltersAndSearch = applyFiltersAndSearch;
+        window.setFilterStatus = setFilterStatus;
+        window.toggleExportMenu = toggleExportMenu;
+        window.exportToCSV = exportToCSV;
+        window.exportToPDF = exportToPDF;
+        window.requestBrowserNotificationPermission = requestBrowserNotificationPermission;
+        window.sendBalanceUpdateViaWhatsApp = sendBalanceUpdateViaWhatsApp;
+        window.openGiftLinkModal = openGiftLinkModal;
+        window.closeGiftLinkModal = closeGiftLinkModal;
+        window.generateSecureGiftLinkAction = generateSecureGiftLinkAction;
+        window.unlockClaimWithPasscode = unlockClaimWithPasscode;
+        window.redeemOnStore = redeemOnStore;
+        window.openDirectStoreRedeem = openDirectStoreRedeem;
+        window.installPWA = installPWA;
+        window.getBrandLogoHtml = getBrandLogoHtml;
+
+        function sanitize(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.innerText = str;
+            return div.innerHTML;
+        }
+
+        // Function to generate the official VoucherVault high-res 512x512 logo icon for PWA installation
+        function generateAppLogoDataUrl() {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+
+                // Dark slate rounded background
+                const grad = ctx.createLinearGradient(0, 0, 512, 512);
+                grad.addColorStop(0, '#1e1b4b');
+                grad.addColorStop(0.5, '#0f172a');
+                grad.addColorStop(1, '#3b0764');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 512, 512);
+
+                // Gradient Shield Emblem
+                const shieldGrad = ctx.createLinearGradient(120, 80, 400, 440);
+                shieldGrad.addColorStop(0, '#6366f1');
+                shieldGrad.addColorStop(0.5, '#a855f7');
+                shieldGrad.addColorStop(1, '#ec4899');
+                ctx.strokeStyle = shieldGrad;
+                ctx.lineWidth = 26;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                // Draw Shield
+                ctx.beginPath();
+                ctx.moveTo(256, 70);
+                ctx.lineTo(120, 130);
+                ctx.lineTo(120, 260);
+                ctx.bezierCurveTo(120, 370, 200, 440, 256, 460);
+                ctx.bezierCurveTo(312, 440, 392, 370, 392, 260);
+                ctx.lineTo(392, 130);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Inner Gift Bow
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(256, 230, 24, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Gift Box cross ribbon
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 14;
+                ctx.beginPath();
+                ctx.moveTo(190, 250);
+                ctx.lineTo(322, 250);
+                ctx.moveTo(256, 184);
+                ctx.lineTo(256, 330);
+                ctx.stroke();
+
+                return canvas.toDataURL('image/png');
+            } catch (e) {
+                return "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>";
+            }
+        }
+
+        function getBrandLogoHtml(appName) {
+            const lower = (appName || '').toLowerCase().trim();
+            const brands = {
+                'amazon': { bg: 'bg-slate-900', url: 'https://www.vectorlogo.zone/logos/amazon/amazon-icon.svg' },
+                'flipkart': { bg: 'bg-[#2874f0]', url: 'https://iconape.com/wp-content/files/ky/368211/svg/368211.svg' },
+                'myntra': { bg: 'bg-white', url: 'https://www.vectorlogo.zone/logos/myntra/myntra-icon.svg' },
+                'apple': { bg: 'bg-black', url: 'https://www.vectorlogo.zone/logos/apple/apple-icon.svg' },
+                'google': { bg: 'bg-white', url: 'https://www.vectorlogo.zone/logos/google/google-icon.svg' },
+                'steam': { bg: 'bg-[#171a21]', url: 'https://www.vectorlogo.zone/logos/steampowered/steampowered-icon.svg' },
+                'playstation': { bg: 'bg-[#003791]', url: 'https://www.vectorlogo.zone/logos/playstation/playstation-icon.svg' },
+                'netflix': { bg: 'bg-black', url: 'https://www.vectorlogo.zone/logos/netflix/netflix-icon.svg' },
+                'swiggy': { bg: 'bg-[#fc8019]', url: 'https://www.vectorlogo.zone/logos/swiggy/swiggy-icon.svg' },
+                'zomato': { bg: 'bg-[#cb202d]', url: 'https://www.vectorlogo.zone/logos/zomato/zomato-icon.svg' },
+                'uber': { bg: 'bg-black', url: 'https://www.vectorlogo.zone/logos/uber/uber-icon.svg' },
+                'starbucks': { bg: 'bg-[#00704a]', url: 'https://www.vectorlogo.zone/logos/starbucks/starbucks-icon.svg' }
+            };
+
+            for (const [key, item] of Object.entries(brands)) {
+                if (lower.includes(key)) {
+                    return `<div class="w-12 h-12 rounded-2xl ${item.bg} p-2 flex items-center justify-center shadow-md border border-slate-700/60 overflow-hidden"><img src="${item.url}" alt="${appName}" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<i class=\\'fa-solid fa-store text-indigo-400 text-xl\\'></i>'" /></div>`;
+                }
+            }
+
+            // Default branded letter emblem
+            const initial = (appName || 'A').charAt(0).toUpperCase();
+            return `<div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-500/20">${initial}</div>`;
+        }
+
+        // ---------------- PWA SERVICE WORKER & MANIFEST ----------------
+        function initPWA() {
+            const logoPng = generateAppLogoDataUrl();
+
+            // Update Apple Touch Icon & Favicon
+            let touchIcon = document.querySelector("link[rel='apple-touch-icon']");
+            if (!touchIcon) {
+                touchIcon = document.createElement('link');
+                touchIcon.rel = 'apple-touch-icon';
+                document.head.appendChild(touchIcon);
+            }
+            touchIcon.href = logoPng;
+
+            // 1. Generate inlined dynamic manifest blob with the actual app logo
+            try {
+                const manifest = {
+                    name: "VoucherVault Gift Manager",
+                    short_name: "VoucherVault",
+                    start_url: window.location.href,
+                    display: "standalone",
+                    background_color: "#020617",
+                    theme_color: "#0f172a",
+                    icons: [
+                        {
+                            src: logoPng,
+                            sizes: "512x512",
+                            type: "image/png",
+                            purpose: "any maskable"
+                        },
+                        {
+                            src: logoPng,
+                            sizes: "192x192",
+                            type: "image/png",
+                            purpose: "any maskable"
+                        }
+                    ]
+                };
+                const stringManifest = JSON.stringify(manifest);
+                const blob = new Blob([stringManifest], { type: 'application/json' });
+                const manifestURL = URL.createObjectURL(blob);
+                const linkEl = document.createElement('link');
+                linkEl.rel = 'manifest';
+                linkEl.href = manifestURL;
+                document.head.appendChild(linkEl);
+            } catch (err) {
+                console.warn("Manifest creation skipped:", err);
+            }
+
+            // 2. Listen for PWA Install Prompt
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredInstallPrompt = e;
+                const installBtn = document.getElementById('btn-pwa-install');
+                if (installBtn) installBtn.classList.remove('hidden');
+            });
+        }
+
+        function installPWA() {
+            if (deferredInstallPrompt) {
+                deferredInstallPrompt.prompt();
+                deferredInstallPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        showToast('Installing App', 'success', 'VoucherVault is installing to your home screen.');
+                    }
+                    deferredInstallPrompt = null;
+                    document.getElementById('btn-pwa-install').classList.add('hidden');
+                });
+            } else {
+                showToast('App Installed', 'info', 'VoucherVault is ready to use offline or already installed.');
+            }
+        }
+
+        // ---------------- DIRECT STORE REDIRECTION & AUTO-COPY ----------------
+        function getStoreUrl(appName) {
+            if (!appName) return null;
+            const lower = appName.toLowerCase().trim();
+            for (const [key, url] of Object.entries(STORE_REDEEM_URLS)) {
+                if (lower.includes(key)) return url;
+            }
+            return `https://www.google.com/search?q=${encodeURIComponent(appName + ' gift card redeem')}`;
+        }
+
+        function redeemOnStore(appName, voucherCode, pin) {
+            const targetUrl = getStoreUrl(appName);
+            navigator.clipboard.writeText(voucherCode).then(() => {
+                showToast("Code Copied!", "success", `${voucherCode} copied. Opening ${appName}...`);
+                setTimeout(() => {
+                    window.open(targetUrl, '_blank');
+                }, 300);
+            }).catch(() => {
+                window.open(targetUrl, '_blank');
+            });
+        }
+
+        function openDirectStoreRedeem(appId) {
+            const app = getStoredApps().find(a => a.id === appId);
+            if (!app) return;
+            const targetUrl = getStoreUrl(app.name);
+            window.open(targetUrl, '_blank');
+            showToast("Store Opened", "info", `Navigating to ${app.name} gift card center.`);
+        }
+
+        // Cloud Firestore Sync Helpers
+        async function syncUserDataFromCloud(uid) {
+            try {
+                const docRef = doc(db, "user_vaults", uid);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    const cloudData = snap.data();
+                    if (cloudData.apps) localStorage.setItem(STORAGE_APPS, JSON.stringify(cloudData.apps));
+                    if (cloudData.vouchers) localStorage.setItem(STORAGE_VOUCHERS, JSON.stringify(cloudData.vouchers));
+                }
+            } catch (err) {
+                console.warn("Firestore offline or permission denied, using local storage fallback:", err.message);
+            }
+        }
+
+        async function pushUserDataToCloud(uid) {
+            try {
+                const allApps = getStoredApps();
+                const allVouchers = getStoredVouchers();
+                await setDoc(doc(db, "user_vaults", uid), {
+                    apps: allApps,
+                    vouchers: allVouchers,
+                    lastUpdated: new Date().toISOString()
+                }, { merge: true });
+            } catch (err) {
+                console.warn("Could not sync to cloud Firestore:", err.message);
+            }
+        }
+
+        // ---------------- SECURE GIFT LINK ENGINE ----------------
+        function encryptPayload(text, key) {
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+            }
+            return btoa(encodeURIComponent(result));
+        }
+
+        function decryptPayload(encoded, key) {
+            try {
+                const text = decodeURIComponent(atob(encoded));
+                let result = '';
+                for (let i = 0; i < text.length; i++) {
+                    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+                }
+                return result;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function openGiftLinkModal(voucherId) {
+            const v = getStoredVouchers().find(item => item.id === voucherId);
+            if (!v) return;
+            activeGiftShareVoucher = v;
+
+            document.getElementById('gift-link-passcode').value = '';
+            document.getElementById('gift-link-burn').checked = true;
+            document.getElementById('gift-link-result-box').classList.add('hidden');
+            document.getElementById('modal-gift-link').classList.remove('hidden');
+        }
+
+        function closeGiftLinkModal() {
+            activeGiftShareVoucher = null;
+            document.getElementById('modal-gift-link').classList.add('hidden');
+        }
+
+        async function generateSecureGiftLinkAction() {
+            if (!activeGiftShareVoucher) return;
+
+            const passcode = document.getElementById('gift-link-passcode').value.trim();
+            const isBurn = document.getElementById('gift-link-burn').checked;
+            const app = getStoredApps().find(a => a.id === activeGiftShareVoucher.appId);
+
+            const secretToken = "key_" + Math.random().toString(36).substring(2, 10);
+            const encryptionKey = passcode ? `${secretToken}_${passcode}` : secretToken;
+
+            const rawData = JSON.stringify({
+                appName: app ? app.name : "Gift Voucher",
+                voucher: activeGiftShareVoucher.voucher,
+                pin: activeGiftShareVoucher.pin,
+                amount: activeGiftShareVoucher.amount || null,
+                hasPasscode: !!passcode,
+                burnOnRead: isBurn
+            });
+
+            const encrypted = encryptPayload(rawData, encryptionKey);
+            const giftLinkId = "gift_" + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+
+            const giftRecord = {
+                id: giftLinkId,
+                payload: encrypted,
+                hasPasscode: !!passcode,
+                burnOnRead: isBurn,
+                viewsRemaining: isBurn ? 1 : 10,
+                createdAt: new Date().toISOString()
+            };
+
+            const sharedGifts = JSON.parse(localStorage.getItem(STORAGE_SHARED_GIFTS) || "{}");
+            sharedGifts[giftLinkId] = giftRecord;
+            localStorage.setItem(STORAGE_SHARED_GIFTS, JSON.stringify(sharedGifts));
+
+            try {
+                await setDoc(doc(db, "shared_gifts", giftLinkId), giftRecord);
+            } catch (e) {
+                console.warn("Stored shared gift link locally:", e);
+            }
+
+            const fullUrl = `${window.location.origin}${window.location.pathname}#gift=${giftLinkId}&k=${secretToken}`;
+            document.getElementById('gift-link-output').value = fullUrl;
+            document.getElementById('gift-link-result-box').classList.remove('hidden');
+
+            showToast("Gift Link Created!", "success", "Copy and share this link with the recipient.");
+        }
+
+        async function checkIncomingGiftClaim() {
+            const hash = window.location.hash;
+            if (!hash || !hash.includes("gift=")) return false;
+
+            const params = new URLSearchParams(hash.replace(/^#/, ''));
+            const giftId = params.get('gift');
+            const secretToken = params.get('k') || '';
+
+            if (!giftId) return false;
+
+            let giftRecord = null;
+
+            try {
+                const snap = await getDoc(doc(db, "shared_gifts", giftId));
+                if (snap.exists()) giftRecord = snap.data();
+            } catch (e) { }
+
+            if (!giftRecord) {
+                const sharedGifts = JSON.parse(localStorage.getItem(STORAGE_SHARED_GIFTS) || "{}");
+                giftRecord = sharedGifts[giftId];
+            }
+
+            if (!giftRecord || giftRecord.viewsRemaining <= 0) {
+                showToast("Gift Link Expired", "error", "This gift link has already been opened or expired.");
+                switchView('login');
+                return true;
+            }
+
+            activeClaimGiftData = {
+                record: giftRecord,
+                giftId: giftId,
+                secretToken: secretToken
+            };
+
+            switchView('claim');
+
+            if (giftRecord.hasPasscode) {
+                document.getElementById('claim-passcode-box').classList.remove('hidden');
+                document.getElementById('claim-voucher-card').classList.add('hidden');
+            } else {
+                document.getElementById('claim-passcode-box').classList.add('hidden');
+                revealClaimedVoucher(secretToken);
+            }
+
+            return true;
+        }
+
+        function unlockClaimWithPasscode() {
+            const enteredPasscode = document.getElementById('input-claim-passcode').value.trim();
+            if (!enteredPasscode) return showToast("Passcode Required", "error", "Enter the passcode to unlock this voucher.");
+
+            const fullKey = `${activeClaimGiftData.secretToken}_${enteredPasscode}`;
+            revealClaimedVoucher(fullKey);
+        }
+
+        async function revealClaimedVoucher(key) {
+            const decryptedString = decryptPayload(activeClaimGiftData.record.payload, key);
+            if (!decryptedString) {
+                showToast("Incorrect Passcode", "error", "The passcode you entered is incorrect.");
+                return;
+            }
+
+            let voucherData = null;
+            try {
+                voucherData = JSON.parse(decryptedString);
+            } catch (e) {
+                showToast("Decryption Error", "error", "Failed to decrypt voucher.");
+                return;
+            }
+
+            document.getElementById('claim-passcode-box').classList.add('hidden');
+            document.getElementById('claim-voucher-card').classList.remove('hidden');
+
+            document.getElementById('claim-app-title').innerText = voucherData.appName;
+            document.getElementById('claim-display-voucher').innerText = voucherData.voucher;
+            document.getElementById('claim-display-pin').innerText = voucherData.pin;
+
+            if (voucherData.amount) {
+                document.getElementById('claim-display-amount').innerText = `₹${parseFloat(voucherData.amount).toFixed(2)}`;
+                document.getElementById('claim-amount-row').classList.remove('hidden');
+            }
+
+            // Feature 3: Bind Store Link on Claim Page
+            const storeUrl = getStoreUrl(voucherData.appName);
+            const storeBox = document.getElementById('claim-store-redirect-box');
+            const storeBtn = document.getElementById('btn-claim-store');
+            if (storeUrl) {
+                storeBox.classList.remove('hidden');
+                document.getElementById('claim-store-btn-text').innerText = `Redeem on ${voucherData.appName}`;
+                storeBtn.onclick = () => redeemOnStore(voucherData.appName, voucherData.voucher, voucherData.pin);
+            } else {
+                storeBox.classList.add('hidden');
+            }
+
+            try {
+                JsBarcode("#claim-barcode", voucherData.voucher, {
+                    format: "CODE128",
+                    lineColor: "#0f172a",
+                    width: 2,
+                    height: 60,
+                    displayValue: true
+                });
+            } catch (e) { }
+
+            if (activeClaimGiftData.record.burnOnRead) {
+                document.getElementById('claim-burn-text').innerText = "One-time view: this gift link has now self-destructed.";
+                const sharedGifts = JSON.parse(localStorage.getItem(STORAGE_SHARED_GIFTS) || "{}");
+                if (sharedGifts[activeClaimGiftData.giftId]) {
+                    sharedGifts[activeClaimGiftData.giftId].viewsRemaining = 0;
+                    localStorage.setItem(STORAGE_SHARED_GIFTS, JSON.stringify(sharedGifts));
+                }
+                try {
+                    await deleteDoc(doc(db, "shared_gifts", activeClaimGiftData.giftId));
+                } catch (e) { }
+            } else {
+                document.getElementById('claim-burn-text').innerText = "Secure Gift Link: verify your gift details above.";
+            }
+
+            showToast("Gift Voucher Unlocked!", "success", "Enjoy your gift voucher!");
+        }
+
+        // ---------------- SMART EXPIRY SCAN ENGINE ----------------
+        function runSmartExpiryScan() {
+            const vouchers = getStoredVouchers();
+            const apps = getStoredApps();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let expiringList = [];
+
+            vouchers.forEach(v => {
+                if (!v.isRedeemed && v.expiryDate) {
+                    const exp = new Date(v.expiryDate);
+                    exp.setHours(0, 0, 0, 0);
+                    const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+
+                    if (diffDays >= 0 && diffDays <= 7) {
+                        const app = apps.find(a => a.id === v.appId);
+                        expiringList.push({
+                            appName: app ? app.name : "Voucher",
+                            code: v.voucher,
+                            days: diffDays
+                        });
+                    }
+                }
+            });
+
+            if (expiringList.length > 0) {
+                const first = expiringList[0];
+                const msg = `${first.appName} (${first.code}) expires in ${first.days} day(s)!`;
+                showToast("⚠️ Voucher Expiring Soon", "error", msg);
+
+                if ("Notification" in window && Notification.permission === "granted") {
+                    new Notification("VoucherVault Expiry Alert", {
+                        body: msg,
+                        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>"
+                    });
+                }
+            }
+        }
+
+        function requestBrowserNotificationPermission() {
+            if (!("Notification" in window)) {
+                showToast("Notifications Unsupported", "info", "Browser does not support desktop notifications.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    showToast("Alerts Enabled!", "success", "You will now receive desktop notifications for expiring cards.");
+                    runSmartExpiryScan();
+                } else {
+                    showToast("Alerts Blocked", "info", "You can re-enable notifications anytime in site settings.");
+                }
+            });
+        }
+
+        function sendBalanceUpdateViaWhatsApp() {
+            const app = getStoredApps().find(a => a.id === activeAppId);
+            const vouchers = getStoredVouchers().filter(v => v.appId === activeAppId);
+            if (!app || vouchers.length === 0) {
+                showToast("No Vouchers Found", "info", "Add vouchers first before sharing updates.");
+                return;
+            }
+
+            let activeCount = 0;
+            let availableBalance = 0;
+            vouchers.forEach(v => {
+                if (!v.isRedeemed) {
+                    activeCount++;
+                    availableBalance += (parseFloat(v.amount) || 0);
+                }
+            });
+
+            const text = encodeURIComponent(
+                `*VoucherVault Summary for ${app.name}*\n` +
+                `• Active Vouchers: ${activeCount}\n` +
+                `• Total Available Balance: Rs. ${availableBalance.toFixed(2)}\n\n` +
+                `Tracked via VoucherVault Security Hub.`
+            );
+
+            window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+            showToast("WhatsApp Opened", "success", "Share your current balance summary.");
+        }
+
+        // Observer: Listen for Google Auth session with fail-safe immediate render
+        onAuthStateChanged(auth, async (user) => {
+            try {
+                initPWA();
+                const isClaiming = await checkIncomingGiftClaim();
+                if (isClaiming) return;
+            } catch (err) {
+                console.warn("Pre-auth initialization fallback:", err);
+            }
+
+            renderNav(user);
+            if (user) {
+                if (user.emailVerified) {
+                    loadAppsList(user);
+                    switchView('apps');
+                    syncUserDataFromCloud(user.uid).then(() => {
+                        loadAppsList(user);
+                        runSmartExpiryScan();
+                    }).catch((err) => {
+                        console.warn("Cloud sync skipped:", err);
+                    });
+                } else {
+                    tempSignup.email = user.email;
+                    document.getElementById('verify-email-display').innerText = user.email;
+                    switchView('signup');
+                    renderSignupStep(3);
+                }
+            } else {
+                switchView('login');
+            }
+        });
+
+        function switchView(view) {
+            ['signup', 'login', 'forgot', 'apps', 'vouchers', 'claim'].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(`view-${view}`);
+            if (target) {
+                target.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function navigateHome() {
+            window.location.hash = "";
+            const user = auth.currentUser;
+            (user && user.emailVerified) ? switchView('apps') : switchView('login');
+        }
+
+        function toggleProfileDropdown(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('profile-dropdown-menu');
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        function closeProfileDropdownOutside(e) {
+            const menu = document.getElementById('profile-dropdown-menu');
+            const btn = document.getElementById('profile-avatar-btn');
+            if (menu && !menu.classList.contains('hidden')) {
+                if (btn && !btn.contains(e.target) && !menu.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            }
+            const expMenu = document.getElementById('export-menu');
+            if (expMenu && !expMenu.classList.contains('hidden')) {
+                expMenu.classList.add('hidden');
+            }
+        }
+
+        function renderNav(user) {
+            const el = document.getElementById('nav-actions');
+            if (user && user.emailVerified) {
+                const displayName = user.displayName || user.email || 'User';
+                const initial = displayName.trim().charAt(0).toUpperCase();
+
+                el.innerHTML = `
+          <div class="relative">
+            <button id="profile-avatar-btn" onclick="toggleProfileDropdown(event)" class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 hover:opacity-90 text-white font-extrabold text-base flex items-center justify-center shadow-lg shadow-indigo-500/25 ring-2 ring-indigo-400/40 transition transform active:scale-95">
+              ${initial}
+            </button>
+
+            <div id="profile-dropdown-menu" class="hidden absolute right-0 mt-3 w-64 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl py-2 z-50 view-transition text-xs">
+              <div class="px-4 py-3 border-b border-slate-800 bg-slate-900/95 rounded-t-2xl">
+                <p class="font-bold text-white text-sm truncate">${sanitize(displayName)}</p>
+                <p class="text-slate-400 truncate text-[11px] mt-0.5">${sanitize(user.email)}</p>
+                <span class="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold mt-1">
+                  <i class="fa-solid fa-circle-check"></i> Google Verified • PWA Active
+                </span>
+              </div>
+
+              <div class="py-1 bg-slate-900 rounded-b-2xl">
+                <button onclick="toggleProfileDropdown(); promptLogout();" class="w-full text-left px-4 py-2.5 text-slate-300 hover:text-white hover:bg-slate-800 flex items-center gap-2.5 transition font-semibold">
+                  <i class="fa-solid fa-arrow-right-from-bracket text-amber-400 w-4 text-center"></i>
+                  <span>Logout</span>
+                </button>
+                <button onclick="toggleProfileDropdown(); openDeleteAccountModal();" class="w-full text-left px-4 py-2.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 flex items-center gap-2.5 transition font-semibold">
+                  <i class="fa-solid fa-user-xmark text-rose-400 w-4 text-center"></i>
+                  <span>Delete Account Permanently</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+            } else {
+                el.innerHTML = `
+          <button onclick="switchView('login')" class="text-xs text-slate-300 hover:text-white px-3 py-1.5 transition font-semibold">Sign In</button>
+          <button onclick="switchView('signup')" class="bg-indigo-600 hover:bg-indigo-500 text-xs text-white px-4 py-1.5 rounded-xl font-bold shadow-lg shadow-indigo-600/25 transition">Sign Up</button>
+        `;
+            }
+        }
+
+        function showToast(title, type = 'success', msg = '') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-msg').innerText = msg;
+
+            const icon = document.getElementById('toast-icon');
+            if (type === 'success') {
+                icon.className = "fa-solid fa-circle-check text-lg mt-0.5 text-emerald-400";
+                toast.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            } else if (type === 'error') {
+                icon.className = "fa-solid fa-circle-xmark text-lg mt-0.5 text-rose-400";
+                toast.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+            } else {
+                icon.className = "fa-solid fa-circle-info text-lg mt-0.5 text-indigo-400";
+                toast.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+            }
+
+            toast.classList.remove('translate-y-[-20px]', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => dismissToast(), 4000);
+        }
+
+        function dismissToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-[-20px]', 'opacity-0', 'pointer-events-none');
+        }
+
+        // ---------------- 3-STEP REGISTRATION ----------------
+        function renderSignupStep(step) {
+            document.getElementById('form-step-1').classList.toggle('hidden', step !== 1);
+            document.getElementById('form-step-2').classList.toggle('hidden', step !== 2);
+            document.getElementById('step-3-container').classList.toggle('hidden', step !== 3);
+            document.getElementById('step-progress-bar').style.width = step === 1 ? '0%' : step === 2 ? '50%' : '100%';
+
+            const dot1 = document.getElementById('dot-step-1');
+            const dot2 = document.getElementById('dot-step-2');
+            const dot3 = document.getElementById('dot-step-3');
+
+            if (step >= 1) dot1.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-900 shadow-md';
+            if (step >= 2) dot2.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-900 shadow-md';
+            if (step === 3) dot3.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-900 shadow-md';
+        }
+
+        function handleSignupStep1(e) {
+            e.preventDefault();
+            tempSignup.name = document.getElementById('su-name').value.trim();
+            tempSignup.email = document.getElementById('su-email').value.trim();
+            tempSignup.mobile = document.getElementById('su-mobile').value.trim();
+            renderSignupStep(2);
+            showToast('Details Saved', 'info', 'Please create a secure password.');
+        }
+
+        async function handleSignupStep2(e) {
+            e.preventDefault();
+            const p1 = document.getElementById('su-password').value;
+            const p2 = document.getElementById('su-confirm-password').value;
+
+            if (p1 !== p2) return showToast('Passwords mismatch', 'error', 'Passwords do not match.');
+
+            const submitBtn = document.getElementById('btn-submit-signup');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Dispatching Link...";
+
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, tempSignup.email, p1);
+                await updateProfile(cred.user, { displayName: tempSignup.name });
+                await sendEmailVerification(cred.user);
+
+                document.getElementById('verify-email-display').innerText = tempSignup.email;
+                showToast('Real Link Dispatched!', 'success', `Check inbox for ${tempSignup.email}`);
+                renderSignupStep(3);
+            } catch (err) {
+                showToast('Registration Error', 'error', err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>Send Link via Google</span><i class="fa-solid fa-paper-plane text-xs"></i>`;
+            }
+        }
+
+        async function checkEmailVerifiedStatus() {
+            if (!auth.currentUser) return switchView('login');
+            await auth.currentUser.reload();
+
+            if (auth.currentUser.emailVerified) {
+                showToast('Account Verified!', 'success', 'Welcome to VoucherVault.');
+                loadAppsList(auth.currentUser);
+            } else {
+                showToast('Not Verified Yet', 'error', 'Open your email and click the verification link first.');
+            }
+        }
+
+        async function resendRealVerificationEmail() {
+            if (auth.currentUser) {
+                try {
+                    await sendEmailVerification(auth.currentUser);
+                    showToast('Verification Email Sent', 'success', 'Please check your inbox & spam folder.');
+                } catch (err) {
+                    showToast('Error', 'error', err.message);
+                }
+            }
+        }
+
+        // ---------------- AUTH: LOGIN & FORGOT ----------------
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-password').value;
+            const loginBtn = document.getElementById('btn-login');
+
+            loginBtn.disabled = true;
+            loginBtn.innerText = "Verifying...";
+
+            try {
+                const cred = await signInWithEmailAndPassword(auth, email, pass);
+                if (!cred.user.emailVerified) {
+                    showToast('Email Not Verified', 'error', 'Please click the link sent to your email.');
+                    tempSignup.email = cred.user.email;
+                    document.getElementById('verify-email-display').innerText = cred.user.email;
+                    switchView('signup');
+                    renderSignupStep(3);
+                    return;
+                }
+                await syncUserDataFromCloud(cred.user.uid);
+                showToast('Login Successful', 'success', `Welcome back, ${cred.user.displayName || cred.user.email}!`);
+                loadAppsList(cred.user);
+            } catch (err) {
+                showToast('Login Failed', 'error', err.message);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerText = "Sign In";
+            }
+        }
+
+        function promptLogout() {
+            document.getElementById('modal-logout-confirm').classList.remove('hidden');
+        }
+
+        function closeLogoutModal() {
+            document.getElementById('modal-logout-confirm').classList.add('hidden');
+        }
+
+        async function confirmLogout() {
+            closeLogoutModal();
+            await signOut(auth);
+            showToast('Logged Out', 'info', 'Your session has been terminated safely.');
+            switchView('login');
+        }
+
+        // ---------------- PERMANENT ACCOUNT DELETION ----------------
+        function openDeleteAccountModal() {
+            document.getElementById('del-confirm-name').value = '';
+            document.getElementById('del-confirm-password').value = '';
+            document.getElementById('modal-delete-account').classList.remove('hidden');
+        }
+
+        function closeDeleteAccountModal() {
+            document.getElementById('modal-delete-account').classList.add('hidden');
+        }
+
+        async function handleDeleteAccountPermanent(e) {
+            e.preventDefault();
+            const enteredName = document.getElementById('del-confirm-name').value.trim();
+            const enteredPassword = document.getElementById('del-confirm-password').value;
+            const user = auth.currentUser;
+
+            if (!user) return;
+
+            const userName = (user.displayName || '').trim();
+            if (enteredName.toLowerCase() !== userName.toLowerCase()) {
+                showToast('Name Mismatch', 'error', 'The name entered does not match your registered name.');
+                return;
+            }
+
+            const btn = document.getElementById('btn-delete-acc-confirm');
+            btn.disabled = true;
+            btn.innerText = "Deleting Account...";
+
+            try {
+                const credential = EmailAuthProvider.credential(user.email, enteredPassword);
+                await reauthenticateWithCredential(user, credential);
+
+                const uid = user.uid;
+
+                let allApps = getStoredApps().filter(a => a.uid !== uid);
+                localStorage.setItem(STORAGE_APPS, JSON.stringify(allApps));
+
+                let userAppIds = getStoredApps().filter(a => a.uid === uid).map(a => a.id);
+                let allVouchers = getStoredVouchers().filter(v => !userAppIds.includes(v.appId));
+                localStorage.setItem(STORAGE_VOUCHERS, JSON.stringify(allVouchers));
+
+                try {
+                    await deleteDoc(doc(db, "user_vaults", uid));
+                } catch (e) { }
+
+                await deleteUser(user);
+
+                closeDeleteAccountModal();
+                showToast('Account Deleted', 'info', 'Your account and all associated cloud data have been wiped.');
+                switchView('signup');
+            } catch (err) {
+                showToast('Deletion Failed', 'error', err.message || 'Incorrect password provided.');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Delete Forever";
+            }
+        }
+
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim();
+            const btn = document.getElementById('btn-forgot');
+            btn.disabled = true;
+
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showToast('Reset Link Dispatched', 'success', 'Check your email inbox for the reset link.');
+                setTimeout(() => switchView('login'), 2000);
+            } catch (err) {
+                showToast('Error', 'error', err.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ---------------- APPLICATIONS LOGIC ----------------
+        function getStoredApps() {
+            return JSON.parse(localStorage.getItem(STORAGE_APPS) || "[]");
+        }
+
+        function getStoredVouchers() {
+            return JSON.parse(localStorage.getItem(STORAGE_VOUCHERS) || "[]");
+        }
+
+        function loadAppsList(user) {
+            switchView('apps');
+            const apps = getStoredApps().filter(a => a.uid === user.uid);
+            const grid = document.getElementById('apps-grid');
+            const empty = document.getElementById('apps-empty');
+
+            if (apps.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            const vouchers = getStoredVouchers();
+
+            grid.innerHTML = apps.map(app => {
+                const appVouchers = vouchers.filter(v => v.appId === app.id);
+                const count = appVouchers.length;
+                const totalAmount = appVouchers.reduce((sum, v) => sum + (parseFloat(v.amount) || 0), 0);
+
+                return `
+          <div class="glass-card p-6 rounded-3xl hover:border-indigo-500/80 cursor-pointer shadow-lg hover:shadow-indigo-500/10 transition transform hover:-translate-y-1.5 duration-200 relative group">
+            <div onclick="openAppVouchers('${app.id}')">
+              <div class="flex justify-between items-start mb-4">
+                ${getBrandLogoHtml(app.name)}
+                <div class="flex flex-col items-end gap-1">
+                  <span class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-bold border border-slate-700/60">
+                    ${count} Voucher${count === 1 ? '' : 's'}
+                  </span>
+                  ${totalAmount > 0 ? `<span class="text-[11px] font-mono text-emerald-400 font-bold">₹${totalAmount.toFixed(2)}</span>` : ''}
+                </div>
+              </div>
+              <h3 class="text-lg font-bold text-white tracking-tight">${sanitize(app.name)}</h3>
+              <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                <span>View & manage vault</span>
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+              </p>
+            </div>
+            <button onclick="event.stopPropagation(); promptDeleteApp('${app.id}')" title="Delete App" class="absolute top-4 right-4 text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition p-2">
+              <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
           </div>
         `;
-      } else {
-        navActions.innerHTML = `
-          <button onclick="switchView('login')" class="text-slate-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
-            Sign In
-          </button>
-          <button onclick="switchView('signup')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-indigo-600/20">
-            Sign Up
-          </button>
+            }).join('');
+        }
+
+        function openAddAppModal() {
+            document.getElementById('new-app-name').value = '';
+            document.getElementById('modal-add-app').classList.remove('hidden');
+        }
+
+        function closeAddAppModal() {
+            document.getElementById('modal-add-app').classList.add('hidden');
+        }
+
+        async function handleCreateApp(e) {
+            e.preventDefault();
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const name = document.getElementById('new-app-name').value.trim();
+            const apps = getStoredApps();
+            const newApp = {
+                id: "app-" + Date.now(),
+                uid: user.uid,
+                name
+            };
+
+            apps.push(newApp);
+            localStorage.setItem(STORAGE_APPS, JSON.stringify(apps));
+            await pushUserDataToCloud(user.uid);
+
+            closeAddAppModal();
+            showToast('Application Added', 'success', `"${name}" added successfully.`);
+            loadAppsList(user);
+        }
+
+        function promptDeleteApp(appId) {
+            pendingAppDeleteId = appId;
+            const app = getStoredApps().find(a => a.id === appId);
+            const appName = app ? app.name : 'this application';
+            document.getElementById('del-app-msg').innerText = `Are you sure you want to permanently delete "${appName}" and all of its stored gift vouchers?`;
+            document.getElementById('modal-delete-app').classList.remove('hidden');
+        }
+
+        function closeDeleteAppModal() {
+            pendingAppDeleteId = null;
+            document.getElementById('modal-delete-app').classList.add('hidden');
+        }
+
+        async function confirmDeleteApp() {
+            if (!pendingAppDeleteId) return;
+            const appId = pendingAppDeleteId;
+            const app = getStoredApps().find(a => a.id === appId);
+            const appName = app ? app.name : 'Application';
+
+            let apps = getStoredApps().filter(a => a.id !== appId);
+            localStorage.setItem(STORAGE_APPS, JSON.stringify(apps));
+
+            let vouchers = getStoredVouchers().filter(v => v.appId !== appId);
+            localStorage.setItem(STORAGE_VOUCHERS, JSON.stringify(vouchers));
+
+            if (auth.currentUser) await pushUserDataToCloud(auth.currentUser.uid);
+
+            closeDeleteAppModal();
+            showToast('Application Deleted', 'info', `"${appName}" and its vouchers were removed.`);
+            loadAppsList(auth.currentUser);
+        }
+
+        // ---------------- VOUCHER PAGE ----------------
+        function openAppVouchers(appId) {
+            activeAppId = appId;
+            const app = getStoredApps().find(a => a.id === appId);
+            if (!app) return;
+
+            document.getElementById('current-app-heading').innerText = `${app.name} Vouchers`;
+
+            const headerStoreBtn = document.getElementById('btn-header-store-link');
+            if (headerStoreBtn) {
+                headerStoreBtn.classList.remove('hidden');
+            }
+
+            document.getElementById('voucher-search').value = '';
+            currentFilterStatus = "all";
+            updateFilterButtonsUI();
+
+            renderVouchersTable();
+            switchView('vouchers');
+            showToast('Vault Opened', 'info', `Viewing vouchers for ${app.name}`);
+        }
+
+        function calculateFinancialStats(vouchers) {
+            let total = 0;
+            let redeemed = 0;
+
+            vouchers.forEach(v => {
+                const val = parseFloat(v.amount) || 0;
+                total += val;
+                if (v.isRedeemed) redeemed += val;
+            });
+
+            const available = total - redeemed;
+            document.getElementById('sum-total').innerText = `₹${total.toFixed(2)}`;
+            document.getElementById('sum-redeemed').innerText = `₹${redeemed.toFixed(2)}`;
+            document.getElementById('sum-available').innerText = `₹${available.toFixed(2)}`;
+        }
+
+        function getExpiryBadge(expiryDate, isRedeemed) {
+            if (!expiryDate) return '<span class="text-slate-600">—</span>';
+            if (isRedeemed) return `<span class="text-xs text-slate-500 font-medium">${expiryDate}</span>`;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const exp = new Date(expiryDate);
+            exp.setHours(0, 0, 0, 0);
+
+            const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) {
+                return `<span class="inline-flex items-center gap-1 bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md text-[10px] font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Expired</span>`;
+            } else if (diffDays <= 7) {
+                return `<span class="inline-flex items-center gap-1 bg-rose-500/15 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-md text-[10px] font-bold animate-pulse"><i class="fa-solid fa-clock"></i> ${diffDays}d left</span>`;
+            }
+            return `<span class="text-xs text-slate-300 font-medium">${expiryDate}</span>`;
+        }
+
+        function setFilterStatus(status) {
+            currentFilterStatus = status;
+            updateFilterButtonsUI();
+            renderVouchersTable();
+        }
+
+        function updateFilterButtonsUI() {
+            ['all', 'active', 'redeemed'].forEach(s => {
+                const btn = document.getElementById(`btn-filter-${s}`);
+                if (s === currentFilterStatus) {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-600 text-white";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition";
+                }
+            });
+        }
+
+        function applyFiltersAndSearch() {
+            renderVouchersTable();
+        }
+
+        function renderVouchersTable() {
+            let allAppVouchers = getStoredVouchers().filter(v => v.appId === activeAppId);
+            const currentApp = getStoredApps().find(a => a.id === activeAppId);
+            calculateFinancialStats(allAppVouchers);
+
+            // PRIORITY SORTING:
+            // 1. Unredeemed vouchers on TOP (isRedeemed === false).
+            // 2. Redeemed vouchers at the BOTTOM (isRedeemed === true).
+            // 3. Within each group, newly added vouchers stay on TOP.
+            allAppVouchers.sort((a, b) => {
+                if (a.isRedeemed !== b.isRedeemed) {
+                    return a.isRedeemed ? 1 : -1;
+                }
+                const timeA = a.createdAt || parseInt((a.id || '').replace(/\D/g, '')) || 0;
+                const timeB = b.createdAt || parseInt((b.id || '').replace(/\D/g, '')) || 0;
+                return timeB - timeA;
+            });
+
+            const query = (document.getElementById('voucher-search').value || '').toLowerCase().trim();
+            let filtered = allAppVouchers.filter(v => {
+                const matchesQuery = (
+                    (v.voucher && v.voucher.toLowerCase().includes(query)) ||
+                    (v.pin && v.pin.toLowerCase().includes(query))
+                );
+
+                if (!matchesQuery) return false;
+                if (currentFilterStatus === 'active') return !v.isRedeemed;
+                if (currentFilterStatus === 'redeemed') return v.isRedeemed;
+                return true;
+            });
+
+            const tbody = document.getElementById('vouchers-table-body');
+            const empty = document.getElementById('vouchers-empty');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            tbody.innerHTML = filtered.map(v => {
+                const displayDate = v.purchaseDate ? sanitize(v.purchaseDate) : '<span class="text-slate-600">—</span>';
+                const displayAmount = v.amount ? `<span class="font-mono font-bold text-emerald-400">₹${parseFloat(v.amount).toFixed(2)}</span>` : '<span class="text-slate-600">—</span>';
+                const expiryBadge = getExpiryBadge(v.expiryDate, v.isRedeemed);
+
+                const isPinVisible = unmaskedPins.has(v.id);
+                const pinDisplay = isPinVisible ? sanitize(v.pin) : '••••••••';
+                const appNameForStore = currentApp ? currentApp.name : '';
+
+                return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <!-- Voucher Code + Copy Button -->
+            <td class="py-4 px-5">
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-indigo-300 select-all">${sanitize(v.voucher)}</span>
+                <button onclick="copyCode(this, '${sanitize(v.voucher)}', 'Voucher Code')" title="Copy Voucher Code" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition">
+                  <i class="fa-regular fa-copy text-xs"></i>
+                </button>
+              </div>
+            </td>
+
+            <!-- Masked Pin + Visibility Toggle + Copy -->
+            <td class="py-4 px-5">
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono font-bold text-amber-300 select-all tracking-wider">${pinDisplay}</span>
+                <button onclick="togglePinVisibility('${v.id}')" title="${isPinVisible ? 'Hide PIN' : 'Show PIN'}" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition">
+                  <i class="fa-regular ${isPinVisible ? 'fa-eye-slash' : 'fa-eye'} text-xs"></i>
+                </button>
+                <button onclick="copyCode(this, '${sanitize(v.pin)}', 'Pin')" title="Copy Pin" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition">
+                  <i class="fa-regular fa-copy text-xs"></i>
+                </button>
+              </div>
+            </td>
+
+            <td class="py-4 px-5">${displayAmount}</td>
+            <td class="py-4 px-5 text-slate-300 font-medium">${displayDate}</td>
+            <td class="py-4 px-5">${expiryBadge}</td>
+
+            <!-- Auto-coloring Redeemed Toggle -->
+            <td class="py-4 px-5 text-center">
+              <button onclick="toggleVoucherRedeemed('${v.id}')" class="px-4 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider transition shadow cursor-pointer transform active:scale-95 ${v.isRedeemed ? 'bg-green-600 hover:bg-green-500 text-white ring-2 ring-green-500/40' : 'bg-red-600 hover:bg-red-500 text-white ring-2 ring-red-500/40'
+                    }">
+                ${v.isRedeemed ? 'Redeemed' : 'Not Redeemed'}
+              </button>
+            </td>
+
+            <!-- Actions: Direct Store Redeem + Gift Share Link + Barcode + Delete -->
+            <td class="py-4 px-5 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="redeemOnStore('${sanitize(appNameForStore)}', '${sanitize(v.voucher)}', '${sanitize(v.pin)}')" title="Auto-Copy & Redeem on Store" class="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 p-2 rounded-xl transition">
+                  <i class="fa-solid fa-cart-shopping text-xs"></i>
+                </button>
+                <button onclick="openGiftLinkModal('${v.id}')" title="Generate Secure Gift Link" class="text-pink-400 hover:text-pink-300 hover:bg-pink-500/10 p-2 rounded-xl transition">
+                  <i class="fa-solid fa-share-nodes text-xs"></i>
+                </button>
+                <button onclick="openQrModal('${sanitize(v.voucher)}')" title="Show Barcode / QR Code" class="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 p-2 rounded-xl transition">
+                  <i class="fa-solid fa-barcode text-xs"></i>
+                </button>
+                <button onclick="promptDeleteVoucher('${v.id}')" title="Delete Voucher" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-2 rounded-xl transition">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
         `;
-      }
-    }
-
-    // Toast Notifications
-    function showToast(title, type = 'success', subtitle = '') {
-      const toast = document.getElementById('toast');
-      const icon = document.getElementById('toast-icon');
-      const titleEl = document.getElementById('toast-title');
-      const msgEl = document.getElementById('toast-msg');
-
-      titleEl.innerText = title;
-      msgEl.innerText = subtitle;
-
-      if (type === 'success') {
-        toast.className = "fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-0 opacity-100 max-w-md shadow-2xl rounded-xl p-4 flex items-start gap-3 border text-sm bg-slate-800 border-emerald-500/50 text-emerald-400";
-        icon.className = "fa-solid fa-circle-check text-lg mt-0.5 text-emerald-400";
-      } else if (type === 'error') {
-        toast.className = "fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-0 opacity-100 max-w-md shadow-2xl rounded-xl p-4 flex items-start gap-3 border text-sm bg-slate-800 border-rose-500/50 text-rose-400";
-        icon.className = "fa-solid fa-circle-xmark text-lg mt-0.5 text-rose-400";
-      } else {
-        toast.className = "fixed top-20 right-4 z-50 transform transition-all duration-300 translate-y-0 opacity-100 max-w-md shadow-2xl rounded-xl p-4 flex items-start gap-3 border text-sm bg-slate-800 border-indigo-500/50 text-indigo-400";
-        icon.className = "fa-solid fa-circle-info text-lg mt-0.5 text-indigo-400";
-      }
-
-      setTimeout(() => dismissToast(), 4500);
-    }
-
-    function dismissToast() {
-      const toast = document.getElementById('toast');
-      toast.classList.remove('translate-y-0', 'opacity-100');
-      toast.classList.add('translate-y-[-20px]', 'opacity-0');
-    }
-
-    // Password Visibility Toggle
-    function togglePasswordVisibility(inputId, btn) {
-      const input = document.getElementById(inputId);
-      const icon = btn.querySelector('i');
-      if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-      } else {
-        input.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-      }
-    }
-
-    // ================= 3-STEP SIGNUP LOGIC =================
-    function renderSignupStep(step) {
-      const step1Form = document.getElementById('form-step-1');
-      const step2Form = document.getElementById('form-step-2');
-      const step3Container = document.getElementById('step-3-container');
-      const progressBar = document.getElementById('step-progress-bar');
-
-      const dot1 = document.getElementById('dot-step-1');
-      const dot2 = document.getElementById('dot-step-2');
-      const dot3 = document.getElementById('dot-step-3');
-
-      step1Form.classList.add('hidden');
-      step2Form.classList.add('hidden');
-      step3Container.classList.add('hidden');
-
-      if (step === 1) {
-        step1Form.classList.remove('hidden');
-        progressBar.style.width = '0%';
-        dot1.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800 shadow-md';
-        dot2.className = 'w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
-        dot3.className = 'w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
-      } else if (step === 2) {
-        step2Form.classList.remove('hidden');
-        progressBar.style.width = '50%';
-        dot1.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
-        dot1.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
-        dot2.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800 shadow-md';
-        dot3.className = 'w-8 h-8 rounded-full bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
-      } else if (step === 3) {
-        step3Container.classList.remove('hidden');
-        progressBar.style.width = '100%';
-        dot1.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
-        dot1.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
-        dot2.className = 'w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800';
-        dot2.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
-        dot3.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-4 ring-slate-800 shadow-md';
-      }
-    }
-
-    function handleSignupStep1(e) {
-      e.preventDefault();
-      const name = document.getElementById('su-name').value.trim();
-      const email = document.getElementById('su-email').value.trim().toLowerCase();
-      const mobile = document.getElementById('su-mobile').value.trim();
-
-      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
-      if (users.some(u => u.email === email)) {
-        showToast('Email already registered', 'error', 'Please log in or use a different email ID.');
-        return;
-      }
-
-      tempSignupData.name = name;
-      tempSignupData.email = email;
-      tempSignupData.mobile = mobile || null;
-
-      renderSignupStep(2);
-    }
-
-    function handleSignupStep2(e) {
-      e.preventDefault();
-      const password = document.getElementById('su-password').value;
-      const confirmPassword = document.getElementById('su-confirm-password').value;
-
-      if (password.length < 8) {
-        showToast('Password too short', 'error', 'Must be at least 8 characters long.');
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        showToast('Passwords mismatch', 'error', 'Password and Confirm Password do not match.');
-        return;
-      }
-
-      tempSignupData.password = password; // In real backend: bcrypt hashed
-      tempSignupData.isVerified = false;
-      tempSignupData.verificationToken = "gc_token_" + Math.random().toString(36).substring(2) + Date.now();
-      tempSignupData.createdAt = new Date().toISOString();
-
-      // Save user to storage database
-      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
-      users.push(tempSignupData);
-      localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
-
-      // Build simulated Google verification link
-      const verificationLink = `https://identitytoolkit.googleapis.com/v1/accounts:verifyEmail?apiKey=AIzaSyDEMO_KEY&token=${tempSignupData.verificationToken}&email=${encodeURIComponent(tempSignupData.email)}`;
-      
-      document.getElementById('verify-email-display').innerText = tempSignupData.email;
-      document.getElementById('mock-link-preview').innerText = verificationLink;
-
-      showToast('Step 3: Verification Link Sent', 'success', `Google identity dispatch sent to ${tempSignupData.email}`);
-      renderSignupStep(3);
-    }
-
-    function simulateEmailVerificationClick() {
-      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
-      const target = users.find(u => u.email === tempSignupData.email);
-
-      if (target) {
-        target.isVerified = true;
-        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
-        showToast('Email Verified Successfully!', 'success', 'Google Cloud Identity verified your account. You can now login.');
-        
-        // Auto-fill login and transition
-        document.getElementById('login-email').value = target.email;
-        setTimeout(() => switchView('login'), 1200);
-      }
-    }
-
-    // ================= LOGIN LOGIC =================
-    function handleLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('login-email').value.trim().toLowerCase();
-      const password = document.getElementById('login-password').value;
-
-      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
-      const user = users.find(u => u.email === email && u.password === password);
-
-      if (!user) {
-        showToast('Invalid Credentials', 'error', 'Please check your email and password.');
-        return;
-      }
-
-      if (!user.isVerified) {
-        showToast('Email Not Verified', 'error', 'Please verify your email via the Google verification link first.');
-        tempSignupData = user;
-        document.getElementById('verify-email-display').innerText = user.email;
-        document.getElementById('mock-link-preview').innerText = `https://identitytoolkit.googleapis.com/v1/accounts:verifyEmail?apiKey=AIzaSyDEMO_KEY&token=${user.verificationToken}&email=${encodeURIComponent(user.email)}`;
-        switchView('signup');
-        renderSignupStep(3);
-        return;
-      }
-
-      currentUser = user;
-      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify({
-        email: user.email,
-        name: user.name,
-        isVerified: true
-      }));
-
-      showToast(`Welcome, ${user.name}!`, 'success', 'Successfully authenticated.');
-      loadDashboard();
-    }
-
-    function handleLogout() {
-      currentUser = null;
-      localStorage.removeItem(STORAGE_SESSION_KEY);
-      showToast('Logged out', 'info', 'Session ended successfully.');
-      switchView('login');
-    }
-
-    // ================= FORGOT PASSWORD LOGIC =================
-    function handleForgotPassword(e) {
-      e.preventDefault();
-      const email = document.getElementById('forgot-email').value.trim().toLowerCase();
-      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
-      const user = users.find(u => u.email === email);
-
-      if (!user) {
-        showToast('Email Not Found', 'error', 'No registered account found with that email.');
-        return;
-      }
-
-      document.getElementById('forgot-reset-box').classList.remove('hidden');
-      showToast('Password Reset Dispatched', 'info', 'Google Console dispatched the reset link.');
-    }
-
-    function promptQuickPasswordReset() {
-      const email = document.getElementById('forgot-email').value.trim().toLowerCase();
-      const newPassword = prompt("Enter your new password (minimum 8 characters):");
-      if (!newPassword || newPassword.length < 8) {
-        alert("Password must be at least 8 characters long.");
-        return;
-      }
-
-      const users = JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || "[]");
-      const user = users.find(u => u.email === email);
-      if (user) {
-        user.password = newPassword;
-        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
-        showToast('Password Updated', 'success', 'You can now sign in with your new password.');
-        document.getElementById('login-email').value = email;
-        document.getElementById('forgot-reset-box').classList.add('hidden');
-        switchView('login');
-      }
-    }
-
-    // ================= DASHBOARD & GIFT CARDS LOGIC =================
-    function loadDashboard() {
-      if (!currentUser) return switchView('login');
-
-      document.getElementById('dash-user-name').innerText = currentUser.name;
-      renderCardsList();
-      switchView('dashboard');
-    }
-
-    function getUserCards() {
-      const allCards = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || "[]");
-      return allCards.filter(c => c.userEmail === currentUser.email);
-    }
-
-    function saveAllCards(cards) {
-      localStorage.setItem(STORAGE_CARDS_KEY, JSON.stringify(cards));
-    }
-
-    function renderCardsList() {
-      const cards = getUserCards();
-      const grid = document.getElementById('cards-grid');
-      const emptyBox = document.getElementById('cards-empty');
-
-      // Update stats
-      document.getElementById('stat-total').innerText = cards.length;
-      document.getElementById('stat-redeemed').innerText = cards.filter(c => c.isRedeemed).length;
-      document.getElementById('stat-active').innerText = cards.filter(c => !c.isRedeemed).length;
-
-      if (cards.length === 0) {
-        grid.innerHTML = '';
-        emptyBox.classList.remove('hidden');
-        document.getElementById('card-detail-view').classList.add('hidden');
-        return;
-      }
-
-      emptyBox.classList.add('hidden');
-      grid.innerHTML = cards.map(card => `
-        <div onclick="openCardDetail('${card.id}')" class="bg-slate-800/90 hover:bg-slate-800 border ${card.id === activeCardId ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-700/80'} rounded-2xl p-5 shadow-lg hover:shadow-indigo-500/10 cursor-pointer transition transform hover:-translate-y-1">
-          <div class="flex justify-between items-start mb-3">
-            <div class="w-10 h-10 rounded-xl bg-slate-700/80 flex items-center justify-center text-indigo-400 text-lg">
-              <i class="fa-solid fa-gift"></i>
-            </div>
-            <span class="text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${card.isRedeemed ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}">
-              ${card.isRedeemed ? 'Redeemed' : 'Not Redeemed'}
-            </span>
-          </div>
-
-          <h4 class="font-bold text-white text-base truncate">${escapeHtml(card.name)}</h4>
-          <p class="text-xs font-mono text-slate-400 mt-1">ID: ${card.whichId}</p>
-
-          <div class="mt-4 pt-3 border-t border-slate-700/60 flex justify-between items-center text-xs">
-            <span class="text-slate-400 font-medium">Purchased: ${card.purchaseDate}</span>
-            <span class="text-indigo-400 font-semibold flex items-center gap-1">
-              View <i class="fa-solid fa-chevron-right text-[10px]"></i>
-            </span>
-          </div>
-        </div>
-      `).join('');
-
-      // If active card exists, keep its detail updated
-      if (activeCardId) {
-        const found = cards.find(c => c.id === activeCardId);
-        if (found) renderDetailTable(found);
-      }
-    }
-
-    // Modal Operations
-    function openAddCardModal() {
-      document.getElementById('new-card-name').value = '';
-      document.getElementById('modal-add-card').classList.remove('hidden');
-      setTimeout(() => document.getElementById('new-card-name').focus(), 50);
-    }
-
-    function closeAddCardModal() {
-      document.getElementById('modal-add-card').classList.add('hidden');
-    }
-
-    function handleCreateCard(e) {
-      e.preventDefault();
-      const cardName = document.getElementById('new-card-name').value.trim();
-      if (!cardName) return;
-
-      const randomSegment = () => Math.random().toString(36).substring(2, 6).toUpperCase();
-      const newCard = {
-        id: "card-" + Date.now(),
-        userEmail: currentUser.email,
-        name: cardName,
-        voucherCode: `GV-${randomSegment()}-${randomSegment()}-${Math.floor(100 + Math.random() * 900)}`,
-        pin: Math.floor(1000 + Math.random() * 9000).toString(),
-        purchaseDate: new Date().toISOString().split('T')[0],
-        whichId: `ID-${Math.floor(100000 + Math.random() * 900000)}`,
-        isRedeemed: false
-      };
-
-      const allCards = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || "[]");
-      allCards.unshift(newCard);
-      saveAllCards(allCards);
-
-      closeAddCardModal();
-      showToast('Gift Card Added', 'success', `${cardName} has been saved to your account.`);
-      renderCardsList();
-      openCardDetail(newCard.id);
-    }
-
-    // ================= DETAIL PAGE VIEW & REDEEMED / NOT REDEEMED TOGGLE =================
-    function openCardDetail(cardId) {
-      activeCardId = cardId;
-      const cards = getUserCards();
-      const card = cards.find(c => c.id === cardId);
-      if (!card) return;
-
-      renderDetailTable(card);
-      const detailView = document.getElementById('card-detail-view');
-      detailView.classList.remove('hidden');
-      detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-      renderCardsList(); // Re-render grid to highlight active card
-    }
-
-    function renderDetailTable(card) {
-      document.getElementById('detail-card-name').innerText = card.name;
-      document.getElementById('td-voucher-code').innerText = card.voucherCode;
-      document.getElementById('td-pin').innerText = card.pin;
-      document.getElementById('td-purchase-date').innerText = card.purchaseDate;
-      document.getElementById('td-which-id').innerText = card.whichId;
-
-      const badge = document.getElementById('detail-card-badge');
-      const btn = document.getElementById('td-redeemed-btn');
-      const icon = document.getElementById('td-redeemed-icon');
-      const text = document.getElementById('td-redeemed-text');
-
-      if (card.isRedeemed) {
-        // GREEN STATE for Redeemed
-        badge.className = "text-xs px-2.5 py-0.5 rounded-md font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-        badge.innerText = "Status: Redeemed";
-
-        btn.className = "px-6 py-2.5 rounded-xl text-white font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-600/30 cursor-pointer transition flex items-center justify-center gap-2 mx-auto";
-        icon.className = "fa-solid fa-circle-check text-sm";
-        text.innerText = "Redeemed";
-      } else {
-        // RED STATE for Not Redeemed
-        badge.className = "text-xs px-2.5 py-0.5 rounded-md font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
-        badge.innerText = "Status: Not Redeemed";
-
-        btn.className = "px-6 py-2.5 rounded-xl text-white font-bold text-xs uppercase tracking-wider bg-rose-600 hover:bg-rose-500 ring-2 ring-rose-500/40 shadow-lg shadow-rose-600/30 cursor-pointer transition flex items-center justify-center gap-2 mx-auto";
-        icon.className = "fa-solid fa-clock text-sm";
-        text.innerText = "Not Redeemed";
-      }
-    }
-
-    function toggleActiveCardRedemption() {
-      if (!activeCardId) return;
-
-      const allCards = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || "[]");
-      const card = allCards.find(c => c.id === activeCardId);
-      if (!card) return;
-
-      // Toggle status
-      card.isRedeemed = !card.isRedeemed;
-      saveAllCards(allCards);
-
-      renderDetailTable(card);
-      renderCardsList();
-
-      if (card.isRedeemed) {
-        showToast('Voucher Redeemed!', 'success', 'Status turned GREEN: Redeemed');
-      } else {
-        showToast('Voucher Marked Active', 'info', 'Status turned RED: Not Redeemed');
-      }
-    }
-
-    function closeCardDetail() {
-      activeCardId = null;
-      document.getElementById('card-detail-view').classList.add('hidden');
-      renderCardsList();
-    }
-
-    function deleteCurrentCard() {
-      if (!activeCardId) return;
-      if (!confirm("Are you sure you want to delete this gift card?")) return;
-
-      let allCards = JSON.parse(localStorage.getItem(STORAGE_CARDS_KEY) || "[]");
-      allCards = allCards.filter(c => c.id !== activeCardId);
-      saveAllCards(allCards);
-
-      showToast('Gift card deleted', 'info');
-      closeCardDetail();
-      renderCardsList();
-    }
-
-    function copyToClipboard(elementId) {
-      const text = document.getElementById(elementId).innerText;
-      navigator.clipboard.writeText(text).then(() => {
-        showToast('Copied to clipboard', 'info', text);
-      });
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
-
-    // Bootstrap app
-    window.addEventListener('DOMContentLoaded', () => {
-      initDatabase();
-      if (currentUser && currentUser.isVerified) {
-        loadDashboard();
-      } else {
-        switchView('signup');
-        renderSignupStep(1);
-      }
-    });
-  </script>
+            }).join('');
+        }
+
+        function togglePinVisibility(id) {
+            if (unmaskedPins.has(id)) {
+                unmaskedPins.delete(id);
+            } else {
+                unmaskedPins.add(id);
+            }
+            renderVouchersTable();
+        }
+
+        // ---------------- BARCODE & QR CODE RENDERING ----------------
+        function openQrModal(code) {
+            currentActiveCodeForBarcode = code;
+            document.getElementById('qr-modal-code').innerText = code;
+            switchBarcodeTab('barcode');
+            document.getElementById('modal-qr').classList.remove('hidden');
+        }
+
+        function switchBarcodeTab(tab) {
+            const barcodeContainer = document.getElementById('view-barcode-container');
+            const qrContainer = document.getElementById('view-qr-container');
+            const btnBarcode = document.getElementById('tab-btn-barcode');
+            const btnQr = document.getElementById('tab-btn-qr');
+
+            if (tab === 'barcode') {
+                barcodeContainer.classList.remove('hidden');
+                qrContainer.classList.add('hidden');
+                btnBarcode.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-600 text-white flex items-center gap-1.5";
+                btnQr.className = "px-4 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5";
+
+                try {
+                    JsBarcode("#barcode-canvas", currentActiveCodeForBarcode, {
+                        format: "CODE128",
+                        lineColor: "#0f172a",
+                        width: 2,
+                        height: 65,
+                        displayValue: true,
+                        fontSize: 14,
+                        font: "monospace",
+                        textMargin: 6
+                    });
+                } catch (e) {
+                    console.warn("Barcode rendering fallback:", e);
+                }
+            } else {
+                barcodeContainer.classList.add('hidden');
+                qrContainer.classList.remove('hidden');
+                btnQr.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-600 text-white flex items-center gap-1.5";
+                btnBarcode.className = "px-4 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5";
+
+                const canvasContainer = document.getElementById('qrcode-canvas');
+                canvasContainer.innerHTML = '';
+                new QRCode(canvasContainer, {
+                    text: currentActiveCodeForBarcode,
+                    width: 140,
+                    height: 140,
+                    colorDark: "#0f172a",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+        }
+
+        function closeQrModal() {
+            document.getElementById('modal-qr').classList.add('hidden');
+        }
+
+        function copyCode(btn, text, label = 'Code') {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400 text-xs"></i>';
+                showToast('Copied to Clipboard', 'success', `${label} copied.`);
+                setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+            });
+        }
+
+        function openAddVoucherModal() {
+            document.getElementById('input-voucher').value = '';
+            document.getElementById('input-pin').value = '';
+            document.getElementById('input-amount').value = '';
+            document.getElementById('input-date').value = '';
+            document.getElementById('input-expiry').value = '';
+            document.getElementById('modal-add-voucher').classList.remove('hidden');
+        }
+
+        function closeAddVoucherModal() {
+            document.getElementById('modal-add-voucher').classList.add('hidden');
+        }
+
+        async function handleCreateVoucher(e) {
+            e.preventDefault();
+            const voucher = document.getElementById('input-voucher').value.trim();
+            const pin = document.getElementById('input-pin').value.trim();
+            const amount = document.getElementById('input-amount').value;
+            const purchaseDate = document.getElementById('input-date').value;
+            const expiryDate = document.getElementById('input-expiry').value;
+
+            const vouchers = getStoredVouchers();
+            const newVoucher = {
+                id: "vouch-" + Date.now(),
+                appId: activeAppId,
+                voucher,
+                pin,
+                amount: amount ? parseFloat(amount) : null,
+                purchaseDate: purchaseDate || null,
+                expiryDate: expiryDate || null,
+                isRedeemed: false,
+                createdAt: Date.now()
+            };
+
+            vouchers.push(newVoucher);
+            localStorage.setItem(STORAGE_VOUCHERS, JSON.stringify(vouchers));
+            if (auth.currentUser) await pushUserDataToCloud(auth.currentUser.uid);
+
+            closeAddVoucherModal();
+            showToast('Voucher Added', 'success', 'Voucher details saved to vault.');
+            renderVouchersTable();
+            runSmartExpiryScan();
+        }
+
+        async function toggleVoucherRedeemed(voucherId) {
+            const vouchers = getStoredVouchers();
+            const v = vouchers.find(item => item.id === voucherId);
+            if (!v) return;
+
+            v.isRedeemed = !v.isRedeemed;
+            localStorage.setItem(STORAGE_VOUCHERS, JSON.stringify(vouchers));
+            if (auth.currentUser) await pushUserDataToCloud(auth.currentUser.uid);
+
+            renderVouchersTable();
+            showToast(
+                v.isRedeemed ? 'Marked Redeemed' : 'Marked Not Redeemed',
+                v.isRedeemed ? 'success' : 'info',
+                v.isRedeemed ? 'Status changed to GREEN (Redeemed)' : 'Status changed to RED (Not Redeemed)'
+            );
+        }
+
+        function promptDeleteVoucher(voucherId) {
+            pendingVoucherDeleteId = voucherId;
+            document.getElementById('modal-delete-voucher').classList.remove('hidden');
+        }
+
+        function closeDeleteVoucherModal() {
+            pendingVoucherDeleteId = null;
+            document.getElementById('modal-delete-voucher').classList.add('hidden');
+        }
+
+        async function confirmDeleteVoucher() {
+            if (!pendingVoucherDeleteId) return;
+
+            let vouchers = getStoredVouchers();
+            vouchers = vouchers.filter(v => v.id !== pendingVoucherDeleteId);
+            localStorage.setItem(STORAGE_VOUCHERS, JSON.stringify(vouchers));
+
+            if (auth.currentUser) await pushUserDataToCloud(auth.currentUser.uid);
+
+            closeDeleteVoucherModal();
+            renderVouchersTable();
+            showToast('Voucher Deleted', 'info', 'Voucher has been permanently deleted from this application.');
+        }
+
+        // ---------------- EXPORT TO CSV & PDF (WITH RUPEE SYMBOL FIX) ----------------
+        function toggleExportMenu(e) {
+            e.stopPropagation();
+            document.getElementById('export-menu').classList.toggle('hidden');
+        }
+
+        function exportToCSV() {
+            const app = getStoredApps().find(a => a.id === activeAppId);
+            const vouchers = getStoredVouchers().filter(v => v.appId === activeAppId);
+
+            if (vouchers.length === 0) return showToast('Export Empty', 'error', 'No vouchers to export.');
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Gift Voucher,Pin,Amount (INR),Purchase Date,Expiry Date,Status\r\n";
+
+            vouchers.forEach(v => {
+                const row = [
+                    `"${v.voucher}"`,
+                    `"${v.pin}"`,
+                    v.amount ? `Rs. ${parseFloat(v.amount).toFixed(2)}` : 0,
+                    v.purchaseDate || "",
+                    v.expiryDate || "",
+                    v.isRedeemed ? "Redeemed" : "Not Redeemed"
+                ].join(",");
+                csvContent += row + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${app ? app.name : 'Vouchers'}_export.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('CSV Exported', 'success', 'Voucher list downloaded successfully.');
+        }
+
+        // PDF Export with Unicode Rupee Symbol Fix
+        function exportToPDF() {
+            const app = getStoredApps().find(a => a.id === activeAppId);
+            const vouchers = getStoredVouchers().filter(v => v.appId === activeAppId);
+
+            if (vouchers.length === 0) return showToast('Export Empty', 'error', 'No vouchers to export.');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(18);
+            doc.text(`${app ? app.name : 'Application'} - Gift Vouchers`, 14, 20);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generated on ${new Date().toLocaleDateString()} via VoucherVault Pro`, 14, 28);
+
+            const tableRows = vouchers.map(v => [
+                v.voucher,
+                v.pin,
+                v.amount ? `Rs. ${parseFloat(v.amount).toFixed(2)}` : '—',
+                v.purchaseDate || '—',
+                v.expiryDate || '—',
+                v.isRedeemed ? 'Redeemed' : 'Not Redeemed'
+            ]);
+
+            doc.autoTable({
+                startY: 34,
+                head: [['Gift Voucher', 'Pin', 'Amount (INR)', 'Purchase Date', 'Expiry Date', 'Status']],
+                body: tableRows,
+                theme: 'grid',
+                headStyles: { fillColor: [79, 70, 229] },
+                styles: { fontSize: 8 }
+            });
+
+            doc.save(`${app ? app.name : 'Vouchers'}_report.pdf`);
+            showToast('PDF Exported', 'success', 'PDF report downloaded with fixed currency format.');
+        }
+    </script>
 </body>
+
 </html>
